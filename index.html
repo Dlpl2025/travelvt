@@ -43,7 +43,7 @@
       transition: filter 0.3s ease;
     }
 
-    /* Fixed Red Header with Centered Logo */
+    /* Fixed Red Header with Centered Logo & Logout on Right */
     header {
       position: fixed;
       top: 0;
@@ -53,10 +53,14 @@
       background-color: var(--primary-red);
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
       z-index: 50;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
       padding: 0 16px;
+    }
+
+    .header-spacer {
+      width: 70px;
     }
 
     .header-logo {
@@ -65,6 +69,27 @@
       max-width: 160px;
       object-fit: contain;
       border-radius: 4px;
+    }
+
+    /* Logout Button Styling */
+    .logout-btn {
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .logout-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .logout-btn:active {
+      transform: scale(0.96);
     }
 
     /* Scrollable Main Content Area */
@@ -282,7 +307,7 @@
       max-width: 360px;
       padding: 28px 24px;
       border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
       text-align: center;
     }
 
@@ -359,9 +384,11 @@
 
   <!-- Background Application Wrapper (Blurred until Login) -->
   <div id="appContainer" class="blurred-bg">
-    <!-- Fixed Red Header with LIVE VT Centered Logo -->
+    <!-- Fixed Red Header -->
     <header>
+      <div class="header-spacer"></div>
       <img class="header-logo" src="logo.png" alt="LIVE VT Logo" />
+      <button class="logout-btn" id="logoutBtn" title="Sign Out">Log Out</button>
     </header>
 
     <!-- Scrollable Channel Grid Area -->
@@ -421,17 +448,28 @@
   </div>
 
   <script>
-    // Login Verification Logic
+    // Login / Logout Verification Logic
     const appContainer = document.getElementById("appContainer");
     const loginModal = document.getElementById("loginModal");
     const loginForm = document.getElementById("loginForm");
     const usernameInput = document.getElementById("username");
     const passwordInput = document.getElementById("password");
     const loginError = document.getElementById("loginError");
+    const logoutBtn = document.getElementById("logoutBtn");
 
     function unlockApp() {
       loginModal.style.display = "none";
       appContainer.classList.remove("blurred-bg");
+    }
+
+    function lockApp() {
+      sessionStorage.removeItem("authenticated");
+      loginModal.style.display = "flex";
+      appContainer.classList.add("blurred-bg");
+      usernameInput.value = "";
+      passwordInput.value = "";
+      loginError.style.display = "none";
+      closePlayer();
     }
 
     if (sessionStorage.getItem("authenticated") === "true") {
@@ -450,6 +488,8 @@
         loginError.style.display = "block";
       }
     });
+
+    logoutBtn.addEventListener("click", lockApp);
 
     // Channel Data List
     const channels = [
@@ -690,7 +730,6 @@
           video.play().catch(() => {});
         });
       } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        // Native Safari/iOS support
         video.src = channel.url;
         video.addEventListener("loadedmetadata", () => {
           video.play().catch(() => {});
