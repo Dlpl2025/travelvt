@@ -43,7 +43,7 @@
       transition: filter 0.3s ease;
     }
 
-    /* Fixed Red Header with Centered Logo & Logout on Right */
+    /* Fixed Red Header with Side Menu Trigger, Centered Logo & Logout */
     header {
       position: fixed;
       top: 0;
@@ -59,8 +59,28 @@
       padding: 0 16px;
     }
 
-    .header-spacer {
-      width: 70px;
+    /* Triple Dot Menu Button */
+    .menu-toggle-btn {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 1.6rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .menu-toggle-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    .menu-toggle-btn:active {
+      transform: scale(0.92);
     }
 
     .header-logo {
@@ -90,6 +110,78 @@
 
     .logout-btn:active {
       transform: scale(0.96);
+    }
+
+    /* Side Drawer Menu */
+    .drawer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 60;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .drawer-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .side-menu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 250px;
+      height: 100%;
+      background: #ffffff;
+      box-shadow: 4px 0 16px rgba(0, 0, 0, 0.2);
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      z-index: 70;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .side-menu.open {
+      transform: translateX(0);
+    }
+
+    .side-menu-header {
+      height: var(--header-height);
+      background-color: var(--primary-red);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .side-menu-list {
+      list-style: none;
+      padding: 12px 0;
+    }
+
+    .side-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      color: #333;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .side-menu-item:hover {
+      background: #f1f1f1;
+      color: var(--primary-red);
+    }
+
+    .side-menu-item:active {
+      background: #e5e5e5;
     }
 
     /* Scrollable Main Content Area */
@@ -382,11 +474,28 @@
 </head>
 <body>
 
+  <!-- Slide-out Side Menu Drawer -->
+  <aside class="side-menu" id="sideMenu">
+    <div class="side-menu-header">Menu</div>
+    <ul class="side-menu-list">
+      <li>
+        <a class="side-menu-item" href="https://dlpl2025.github.io/travelvt/radio/" target="_blank" rel="noopener">
+          <span>📻</span>
+          <span>Radio=VT</span>
+        </a>
+      </li>
+    </ul>
+  </aside>
+
+  <!-- Overlay behind side drawer -->
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+
   <!-- Background Application Wrapper (Blurred until Login) -->
   <div id="appContainer" class="blurred-bg">
     <!-- Fixed Red Header -->
     <header>
-      <div class="header-spacer"></div>
+      <!-- Triple Dot Button -->
+      <button class="menu-toggle-btn" id="menuToggleBtn" title="Menu" aria-label="Toggle menu">&#8942;</button>
       <img class="header-logo" src="logo.png" alt="LIVE VT Logo" />
       <button class="logout-btn" id="logoutBtn" title="Sign Out">Log Out</button>
     </header>
@@ -457,6 +566,33 @@
     const loginError = document.getElementById("loginError");
     const logoutBtn = document.getElementById("logoutBtn");
 
+    // Drawer Menu Elements
+    const sideMenu = document.getElementById("sideMenu");
+    const menuToggleBtn = document.getElementById("menuToggleBtn");
+    const drawerOverlay = document.getElementById("drawerOverlay");
+
+    function toggleMenu() {
+      const isOpen = sideMenu.classList.contains("open");
+      if (isOpen) {
+        closeMenu();
+      } else {
+        openMenu();
+      }
+    }
+
+    function openMenu() {
+      sideMenu.classList.add("open");
+      drawerOverlay.classList.add("active");
+    }
+
+    function closeMenu() {
+      sideMenu.classList.remove("open");
+      drawerOverlay.classList.remove("active");
+    }
+
+    menuToggleBtn.addEventListener("click", toggleMenu);
+    drawerOverlay.addEventListener("click", closeMenu);
+
     function unlockApp() {
       loginModal.style.display = "none";
       appContainer.classList.remove("blurred-bg");
@@ -469,6 +605,7 @@
       usernameInput.value = "";
       passwordInput.value = "";
       loginError.style.display = "none";
+      closeMenu();
       closePlayer();
     }
 
@@ -813,8 +950,13 @@
     });
 
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && modal.classList.contains("active")) {
-        closePlayer();
+      if (e.key === "Escape") {
+        if (sideMenu.classList.contains("open")) {
+          closeMenu();
+        }
+        if (modal.classList.contains("active")) {
+          closePlayer();
+        }
       }
     });
   </script>
