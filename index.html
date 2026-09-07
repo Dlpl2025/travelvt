@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <link rel="manifest" href="manifest.json">
@@ -33,6 +33,14 @@
       background-color: var(--bg-color);
       color: var(--text-main);
       overflow-x: hidden;
+    }
+
+    /* Blur & Lock App wrapper during login */
+    .blurred-bg {
+      filter: blur(10px);
+      pointer-events: none;
+      user-select: none;
+      transition: filter 0.3s ease;
     }
 
     /* Fixed Red Header with Centered Logo */
@@ -255,22 +263,135 @@
         width: 80px;
       }
     }
+
+    /* Login Popup Overlay */
+    .login-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 20px;
+    }
+
+    .login-box {
+      background: #ffffff;
+      width: 100%;
+      max-width: 360px;
+      padding: 28px 24px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+
+    .login-logo {
+      height: 52px;
+      width: auto;
+      max-width: 180px;
+      object-fit: contain;
+      margin-bottom: 16px;
+    }
+
+    .login-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: #222;
+    }
+
+    .login-field {
+      width: 100%;
+      margin-bottom: 14px;
+      text-align: left;
+    }
+
+    .login-field label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 5px;
+    }
+
+    .login-field input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .login-field input:focus {
+      border-color: var(--primary-red);
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 11px;
+      background-color: var(--primary-red);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background-color 0.2s;
+    }
+
+    .login-btn:hover {
+      background-color: #820d20;
+    }
+
+    .error-msg {
+      color: #dc3545;
+      font-size: 0.82rem;
+      margin-top: 12px;
+      display: none;
+    }
   </style>
 </head>
 <body>
 
-  <!-- Fixed Red Header with LIVE VT Centered Logo -->
-  <header>
-    <img class="header-logo" src="logo.png" alt="LIVE VT Logo" />
-  </header>
+  <!-- Background Application Wrapper (Blurred until Login) -->
+  <div id="appContainer" class="blurred-bg">
+    <!-- Fixed Red Header with LIVE VT Centered Logo -->
+    <header>
+      <img class="header-logo" src="logo.png" alt="LIVE VT Logo" />
+    </header>
 
-  <!-- Scrollable Channel Grid Area -->
-  <main class="container">
-    <h2 class="section-title">All Channels</h2>
-    <div class="channel-grid" id="channelGrid">
-      <!-- Dynamic Channel Bubbles injected via JavaScript -->
+    <!-- Scrollable Channel Grid Area -->
+    <main class="container">
+      <h2 class="section-title">All Channels</h2>
+      <div class="channel-grid" id="channelGrid">
+        <!-- Dynamic Channel Bubbles injected via JavaScript -->
+      </div>
+    </main>
+  </div>
+
+  <!-- Login Popup Modal -->
+  <div class="login-overlay" id="loginModal">
+    <div class="login-box">
+      <img class="login-logo" src="logo.png" alt="App Logo" />
+      <div class="login-title">Sign In to Continue</div>
+      <form id="loginForm">
+        <div class="login-field">
+          <label for="username">User ID</label>
+          <input type="text" id="username" autocomplete="off" required placeholder="Enter User ID" />
+        </div>
+        <div class="login-field">
+          <label for="password">Password</label>
+          <input type="password" id="password" required placeholder="Enter Password" />
+        </div>
+        <button type="submit" class="login-btn">Log In</button>
+        <div class="error-msg" id="loginError">Invalid ID or Password. Please try again.</div>
+      </form>
     </div>
-  </main>
+  </div>
 
   <!-- Video Popup Modal -->
   <div class="modal-overlay" id="videoModal">
@@ -300,6 +421,36 @@
   </div>
 
   <script>
+    // Login Verification Logic
+    const appContainer = document.getElementById("appContainer");
+    const loginModal = document.getElementById("loginModal");
+    const loginForm = document.getElementById("loginForm");
+    const usernameInput = document.getElementById("username");
+    const passwordInput = document.getElementById("password");
+    const loginError = document.getElementById("loginError");
+
+    function unlockApp() {
+      loginModal.style.display = "none";
+      appContainer.classList.remove("blurred-bg");
+    }
+
+    if (sessionStorage.getItem("authenticated") === "true") {
+      unlockApp();
+    }
+
+    loginForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const enteredUser = usernameInput.value.trim();
+      const enteredPass = passwordInput.value.trim();
+
+      if (enteredUser === "balaramd" && enteredPass === "1996") {
+        sessionStorage.setItem("authenticated", "true");
+        unlockApp();
+      } else {
+        loginError.style.display = "block";
+      }
+    });
+
     // Channel Data List
     const channels = [
       { 
