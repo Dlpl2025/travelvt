@@ -1,15 +1,23 @@
 {
-  "name": "LiveVT",
-  "short_name": "LiveVT",
-  "start_url": "/livevt/",
+  "name": "TravelVT",
+  "short_name": "TravelVT",
+  "start_url": "/Travelvt/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",
+  "description": "TravelVT Web Application",
   "icons": [
     {
-      "src": "https://dlpl2025.github.io/livevt/icon.png",
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
