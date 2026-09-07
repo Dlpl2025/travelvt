@@ -2,59 +2,70 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TravelVT Radio</title>
 <!-- HLS.js for .m3u8 live stream playback -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <style>
+  * {
+    box-sizing: border-box;
+  }
+
   body {
     background: #1e1b18;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh;
+    min-height: 100dvh;
     margin: 0;
+    padding: 16px;
     font-family: 'Courier New', monospace;
   }
 
-  /* Radio Cabinet */
+  /* Responsive Radio Cabinet */
   .radio-chassis {
-    width: 380px;
+    width: 100%;
+    max-width: 440px;
     background: linear-gradient(145deg, #5c3a21, #3d2314);
-    border: 10px solid #2a180d;
+    border: 8px solid #2a180d;
     border-radius: 24px;
-    padding: 25px;
+    padding: 24px 20px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.8), inset 0 2px 4px rgba(255,255,255,0.1);
     color: #ffd89b;
   }
 
-  /* Band Selector Switch at Top */
+  /* Band Selector Switch */
   .band-selector-container {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
   }
 
   .band-switch-track {
     display: flex;
     background: #1a0f07;
     border: 2px solid #3d2314;
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 3px;
     gap: 4px;
     box-shadow: inset 0 2px 5px rgba(0,0,0,0.8);
+    width: 100%;
+    max-width: 280px;
   }
 
   .band-btn {
+    flex: 1;
     border: none;
     background: transparent;
     color: #8c6d48;
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     font-weight: 900;
     font-family: inherit;
-    padding: 6px 16px;
-    border-radius: 4px;
+    padding: 8px 12px;
+    border-radius: 6px;
     cursor: pointer;
     letter-spacing: 1px;
     transition: all 0.15s ease;
@@ -71,7 +82,7 @@
   }
 
   .band-label {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
     font-weight: bold;
     letter-spacing: 1px;
@@ -79,7 +90,7 @@
 
   /* Speaker Grille */
   .speaker-grille {
-    height: 90px;
+    height: 110px;
     background: repeating-linear-gradient(
       0deg,
       #1f140d,
@@ -96,17 +107,20 @@
   .tuner-display {
     background: #eedc9a;
     color: #2b1f0d;
-    padding: 12px;
-    border-radius: 6px;
+    padding: 14px 10px;
+    border-radius: 8px;
     border: 4px solid #1a0f07;
     box-shadow: inset 0 4px 10px rgba(0,0,0,0.5);
     text-align: center;
     margin-bottom: 25px;
-    min-height: 48px;
+    min-height: 58px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
   .station-name {
-    font-size: 1rem;
+    font-size: 1.05rem;
     font-weight: bold;
     letter-spacing: 0.5px;
     white-space: nowrap;
@@ -118,6 +132,9 @@
     font-size: 0.8rem;
     color: #6e4e24;
     margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* Control Panel Layout */
@@ -136,6 +153,7 @@
     text-transform: uppercase;
     font-weight: bold;
     letter-spacing: 1px;
+    width: 100%;
   }
 
   /* Horizontal Volume Slider */
@@ -143,9 +161,9 @@
     -webkit-appearance: none;
     appearance: none;
     width: 100%;
-    height: 12px;
+    height: 14px;
     background: #1a0f07;
-    border-radius: 6px;
+    border-radius: 7px;
     outline: none;
     border: 2px solid #3d2314;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8);
@@ -155,20 +173,20 @@
   .volume-bar::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 16px;
-    height: 26px;
+    width: 22px;
+    height: 32px;
     background: linear-gradient(180deg, #d8ab6b, #8a5823);
     border: 2px solid #23150b;
-    border-radius: 4px;
+    border-radius: 5px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
   }
 
   .volume-bar::-moz-range-thumb {
-    width: 16px;
-    height: 26px;
+    width: 22px;
+    height: 32px;
     background: linear-gradient(180deg, #d8ab6b, #8a5823);
     border: 2px solid #23150b;
-    border-radius: 4px;
+    border-radius: 5px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
   }
 
@@ -176,19 +194,19 @@
   .arrow-buttons {
     display: flex;
     justify-content: center;
-    gap: 25px;
+    gap: 30px;
     width: 100%;
   }
 
   /* Antique Brass Push Buttons */
   .vintage-arrow-btn {
-    width: 50px;
-    height: 40px;
+    width: 68px;
+    height: 48px;
     background: linear-gradient(180deg, #d8ab6b 0%, #8a5823 100%);
     border: 2px solid #23150b;
-    border-radius: 6px;
+    border-radius: 8px;
     color: #23150b;
-    font-size: 1.2rem;
+    font-size: 1.4rem;
     font-weight: 900;
     cursor: pointer;
     box-shadow: 0 4px 0 #23150b, 0 5px 8px rgba(0, 0, 0, 0.6);
@@ -197,6 +215,7 @@
     justify-content: center;
     align-items: center;
     user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .vintage-arrow-btn:active {
@@ -215,7 +234,6 @@
 <body>
 
 <div class="radio-chassis">
-  <!-- Band Selector Switch on Upper Portion -->
   <div class="band-selector-container">
     <div class="band-switch-track">
       <button class="band-btn active" data-band="MW">MW</button>
@@ -233,13 +251,11 @@
   </div>
 
   <div class="controls">
-    <!-- Volume Slider Bar -->
     <div class="control-group">
       <input type="range" id="volSlider" class="volume-bar" min="0" max="1" step="0.01" value="0.7">
       <span>Volume</span>
     </div>
 
-    <!-- Arrow Channel Controls -->
     <div class="control-group">
       <div class="arrow-buttons">
         <button class="vintage-arrow-btn" id="prevBtn" title="Previous Station">&lt;</button>
@@ -355,7 +371,6 @@
     playStream(selected.src);
   }
 
-  // Band switch handler
   bandButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       bandButtons.forEach(b => b.classList.remove('active'));
@@ -367,12 +382,10 @@
     });
   });
 
-  // Volume slider listener
   volSlider.addEventListener('input', (e) => {
     audio.volume = e.target.value;
   });
 
-  // Previous channel button
   prevBtn.addEventListener('click', () => {
     const bandStations = stationCatalog[currentBand];
     if (bandStations && bandStations.length > 0) {
@@ -381,7 +394,6 @@
     }
   });
 
-  // Next channel button
   nextBtn.addEventListener('click', () => {
     const bandStations = stationCatalog[currentBand];
     if (bandStations && bandStations.length > 0) {
@@ -390,7 +402,6 @@
     }
   });
 
-  // Initial boot
   audio.volume = volSlider.value;
   updateStation();
 </script>
