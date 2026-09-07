@@ -1,0 +1,631 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Live VT Player</title>
+  
+  <!-- Browser Tab Favicon Logo -->
+  <link rel="icon" type="image/png" href="logo.png" />
+  
+  <!-- Hls.js library to handle m3u8 playback -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    :root {
+      --primary-red: #9e1026;
+      --bg-color: #f8f9fa;
+      --card-bg: #e6e6e6;
+      --text-main: #222;
+      --header-height: 56px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      overflow-x: hidden;
+    }
+
+    /* Fixed Red Header with Centered Logo */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: var(--header-height);
+      background-color: var(--primary-red);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      padding: 0 16px;
+    }
+
+    .header-logo {
+      height: 38px;
+      width: auto;
+      max-width: 160px;
+      object-fit: contain;
+      border-radius: 4px;
+    }
+
+    /* Scrollable Main Content Area */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: calc(var(--header-height) + 16px) 16px 32px 16px;
+      min-height: 100vh;
+      overflow-y: auto;
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 18px;
+    }
+
+    /* Responsive Grid for Mobile & Desktop */
+    .channel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 16px;
+      justify-items: center;
+    }
+
+    @media (min-width: 600px) {
+      .channel-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 24px;
+      }
+      .section-title {
+        font-size: 1.5rem;
+        margin-bottom: 24px;
+      }
+    }
+
+    /* Channel Circular Cards */
+    .channel-card {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background-color: var(--card-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      user-select: none;
+      overflow: hidden;
+      padding: 10px;
+    }
+
+    @media (min-width: 600px) {
+      .channel-card {
+        width: 120px;
+        height: 120px;
+        padding: 14px;
+      }
+    }
+
+    .channel-card:active {
+      transform: scale(0.95);
+    }
+
+    .channel-card:hover {
+      transform: translateY(-3px) scale(1.04);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.16);
+      background-color: #dedede;
+    }
+
+    .channel-logo {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 50%;
+    }
+
+    /* Video Popup / Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.88);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 12px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #111;
+      color: #fff;
+      width: 100%;
+      max-width: 800px;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: #1a1a1a;
+      min-height: 48px;
+    }
+
+    .modal-logo {
+      height: 32px;
+      width: 32px;
+      object-fit: contain;
+      border-radius: 50%;
+      background-color: #fff;
+      padding: 2px;
+    }
+
+    .close-btn {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 1.6rem;
+      cursor: pointer;
+      padding: 2px 8px;
+      line-height: 1;
+      border-radius: 4px;
+    }
+
+    .close-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .video-container {
+      position: relative;
+      width: 100%;
+      background: #000;
+      aspect-ratio: 16 / 9;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Player Controls Bar */
+    .player-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: #1a1a1a;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .nav-buttons, .right-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ctrl-btn {
+      background: #333;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    .ctrl-btn:hover {
+      background: #4f4f4f;
+    }
+
+    .volume-slider {
+      cursor: pointer;
+      accent-color: var(--primary-red);
+      width: 60px;
+    }
+
+    @media (min-width: 480px) {
+      .volume-slider {
+        width: 80px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fixed Red Header with LIVE VT Centered Logo -->
+  <header>
+    <img class="header-logo" src="logo.png" alt="LIVE VT Logo" />
+  </header>
+
+  <!-- Scrollable Channel Grid Area -->
+  <main class="container">
+    <h2 class="section-title">All Channels</h2>
+    <div class="channel-grid" id="channelGrid">
+      <!-- Dynamic Channel Bubbles injected via JavaScript -->
+    </div>
+  </main>
+
+  <!-- Video Popup Modal -->
+  <div class="modal-overlay" id="videoModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <img class="modal-logo" id="currentChannelLogo" src="" alt="Channel Logo" />
+        <button class="close-btn" id="closeModal" title="Close (X)">&times;</button>
+      </div>
+
+      <div class="video-container" id="videoContainer">
+        <video id="videoPlayer" playsinline></video>
+      </div>
+
+      <div class="player-controls">
+        <div class="nav-buttons">
+          <button class="ctrl-btn" id="prevBtn" title="Previous Channel">&#10094; Prev</button>
+          <button class="ctrl-btn" id="nextBtn" title="Next Channel">Next &#10095;</button>
+        </div>
+
+        <div class="right-controls">
+          <button class="ctrl-btn" id="muteBtn" title="Mute/Unmute">🔊</button>
+          <input type="range" id="volumeSlider" class="volume-slider" min="0" max="1" step="0.05" value="1" title="Volume Control" />
+          <button class="ctrl-btn" id="fullscreenBtn" title="Fullscreen">⛶ Fullscreen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Channel Data List
+    const channels = [
+      { 
+        name: "Travel Xp", 
+        url: "https://amg00416-amg00416c9-samsung-in-4882.playouts.now.amagi.tv/ts-ap-s1-n1/playlist/amg00416-travelxp-travelxphd-samsungin/y3w-Gnt3b4yayzVu0PBIqt8GatBdYtEyZ6BXxCTBFQrUtfnJ5Urpbn7AYoErUzENDHjOB95sGaCHJPwOcz8HCv6Is3vHmRkZ1YFRLC64alZX-hcFoWUTftzeHwquNKE2UEC_Rz0AcsWWIckLLtmQVtIkfJvaiDJiIkNP7AUfuv0LvP7kXFvYcqGvHFj2fhO2wBvW0R-8ntddjFePdqISnZv2gs4ZgNOYfqhW5GVEAXR5nM19xZAN7tnKOGmecyp0CD-JywUhY0bkbm0endbFu2z-YaHjR6BTR3CEBS3-VKt4owjdjCY8JZatJWo2qM9adSbikMh7JxlB31HZ2ILqdm-NtjZ9Sc5s1GhDUvaqm0TUkkzE9EvgxfEuuwVqoc29yxJ7mrSs5BPqjZi5LktPLC8Nilajjmzh5LwSp-McO1VBSKzVAIrWmRYHa0GCj0nHUzWNm9rTkV5gilcSVL40ghsdOph9LF31PfWfC2mLDQORemioD3vTFLzwB92T9slKe7nXzEe_SOq2Ad2_QoplLlYPtr19ChQCLZ6-KF1wSsJD5cHDriJaV6Kkm4y1OVIwMBlWA5zxpyHL_KcHKVaQA2gwDlN98CPZZtgMTHpe6hbBowRxxUthGu-pO1JNf9SvlYSU3d5LpXWxna3ZTpzC2Q5Vy2cCYQBszXUuuuvlvj7iMg/20/640x360_750000/index.m3u8",
+        logo: "https://play-lh.googleusercontent.com/KWcvndFOmLnW5GJaFMIR8pHOAKsQ0iQtqpVf5fBgUaNXzq0FJEJbEeGNLr22IMiCZu9YDhK1SXRdPQ_RoRO2Yco"
+      },
+      { 
+        name: "Travel Xp HD", 
+        url: "https://deltatesttatasky.akamaized.net/out/i/968284.m3u8",
+        logo: "https://yt3.googleusercontent.com/ytc/AIdro_mg_LZ8mDZCXi_kAJT5mUkmtn8OKSS67HhG66QWH5pv1lo=s900-c-k-c0x00ffffff-no-rj"
+      },
+      { 
+        name: "ZEE Bangla Sonar / Colors HD", 
+        url: "https://d1g8wgjurz8via.cloudfront.net/bpk-tv/ColorsHD/default/ColorsHD.m3u8",
+        logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ23E_xuiYLx9xPkape12mt9jy05M10vhsEjy2wPTuIBA&s=10"
+      },
+      { 
+        name: "DD Arun Prabha (360p)", 
+        url: "https://d2lk5u59tns74c.cloudfront.net/out/v1/308556d9fd1246adb479ef012a39bbfe/index.m3u8",
+        logo: "https://upload.wikimedia.org/wikipedia/en/5/54/Arunprabha.jpeg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original"
+      },
+      { 
+        name: "DD Assam (504p)", 
+        url: "https://d2lk5u59tns74c.cloudfront.net/out/v1/d380bf5c167b4319a46cdd8204bc26b2/index.m3u8",
+        logo: "https://upload.wikimedia.org/wikipedia/en/0/07/DD_Assam_logo.jpeg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original"
+      },
+      { 
+        name: "DD Bangla (504p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/7ff57cc9046b4c188b51a0d506f36e7f/index.m3u8",
+        logo: "https://upload.wikimedia.org/wikipedia/en/f/f6/Dd_Bangla.PNG?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original"
+      },
+      { 
+        name: "DD Bharati (504p)", 
+        url: "https://d2lk5u59tns74c.cloudfront.net/out/v1/67cec794d8b14f9ba21f73924ac65797/index.m3u8",
+        logo: "https://jiotvimages.cdn.jio.com/dare_images/images/channel/afa26b5d1b1fbc843606cfc158c145d0.png"
+      },
+      { 
+        name: "DD Bihar (504p)", 
+        url: "https://d2lk5u59tns74c.cloudfront.net/out/v1/380b0765f87741a4812bc952ec6fbf21/index.m3u8",
+        logo: "https://yt3.googleusercontent.com/3Wx_CD5LA3APh4wHx0mJx5z35kCMKZONVZ2BwX2x8HCa19ffoSZ2SHi5xHjN3FwXROIdQ8IApA=s900-c-k-c0x00ffffff-no-rj"
+      },
+      { 
+        name: "DD Chandana (504p)", 
+        url: "https://d2lk5u59tns74c.cloudfront.net/out/v1/0c980455d2fb4b69bcc6235745ee6039/index.m3u8",
+        logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKbo3YhqjNmRWW86_Y0nJfFxXRRQ7qAbF0tUVbW0KH5g&s=10"
+      },
+      { 
+        name: "DD Chhattisgarh (504p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/5078083881bc489ea14f4c85e7abe4d6/index.m3u8",
+        logo: "https://yt3.googleusercontent.com/yq8Kit0v0Sbh5Bg_zRxGEPepYsJ9sxE5MFde0KwocLgbE1AGgfe9tcb9VL93wVO_VYTvVK4oBQ=s900-c-k-c0x00ffffff-no-rj"
+      },
+      { 
+        name: "DD Girnar (504p)", 
+        url: "https://d2lk5u59tns74c.cloudfront.net/out/v1/558fdb9aebb54bb5bbbf0ced03686148/index.m3u8",
+        logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb3bdIKabijpxpFPHkeD_MltyoNTzyOWZDflPciPAYyaUBZweBiXvE5hw&s=10"
+      },
+      { 
+        name: "DD Goa (504p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/e5b9db1cc184406bb97159da2f120f91/index.m3u8",
+        logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRDx3b3lUAIHPljeeTvlHXc8GecQ90b_jxXbCb3IIWfgK0-0EL46TczYWgd&s=10"
+      },
+      { 
+        name: "DD Haryana (504p)", 
+        url: "https://d2lk5u59tns74c.cloudfront.net/out/v1/950fc69666474351bde0a32b9600c804/index.m3u8",
+        logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSQqFpE5v67wywD5PGzBbRwjOei8pFfDnEB6uWxA2GOkw&s=10"
+      },
+      { 
+        name: "DD Himachal Pradesh (504p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/afd2e335b0ba40eb9bdf1096118c6ede/index.m3u8",
+        logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRho_ts1-oSCMYJ3A9lL0QqtrCztM5MIefMXySZNoOCnES11zha_vOf1j0&s=10"
+      },
+      { 
+        name: "DD India (1080p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/ceda14583477426aa162a65392d8ea07/index.m3u8",
+        logo: "https://yt3.googleusercontent.com/4P1ivBexovhw7shJQPtzDWWsnRdSqUUyds7mCnZ4x573G-b4gk9DRNAZ1UYSTa-fx2NcKdck0CQ=s900-c-k-c0x00ffffff-no-rj"
+      },
+      { 
+        name: "DD Jharkhand (504p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/e8c3741f8c154d3185831f4e31777fb2/index.m3u8",
+        logo: "https://yt3.googleusercontent.com/ThpJ6OvwxudDUZKCpwtXbA_UQ7cLV7NyElQIyR7NsjSVfw8EETPe5rpKjESOFyUJQBSt51DSEQ=s900-c-k-c0x00ffffff-no-rj"
+      },
+      { 
+        name: "DD Kashir (504p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/8a59a828e80c49d0958925950cec0204/index.m3u8",
+        logo: "https://jiotvimages.cdn.jio.com/dare_images/images/channel/5fd15e48256b677784eeb013d523e9dc.png"
+      },
+      { 
+        name: "DD Kisan (504p)", 
+        url: "https://d2lk5u59tns74c.cloudfront.net/out/v1/4f053f2c12a24641bf701fb7f2376750/index.m3u8",
+        logo: "https://yt3.googleusercontent.com/JWh-x9MIrdjXUHzYEJxXjDhCE74Nm2dxVEom3hURrX6WdnIDhEgL5nCpWYTcrvugfBo5_iXrGQ=s900-c-k-c0x00ffffff-no-rj"
+      },
+      { 
+        name: "DD Madhya Pradesh (504p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/b5256b391a7c4ae6977535b73fd6f591/index.m3u8",
+        logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQCav1e9DO5DRnA-la1_w7aZzcRWYL2_UrWXM6BBUoDHA&s=10"
+      },
+      { 
+        name: "DD Malayalam (504p)", 
+        url: "https://d2lk5u59tns74c.cloudfront.net/out/v1/c313674ffced4c9a90f1bba436df2b9b/index.m3u8",
+        logo: "https://jiotvimages.cdn.jio.com/dare_images/images/channel/5fd15e48256b677784eeb013d523e9dc.png"
+      },
+      { 
+        name: "DD Manipur (504p)", 
+        url: "https://d2lk5u59tns74c.cloudfront.net/out/v1/8b75afc6576f450e8f554b6c877681d2/index.m3u8",
+        logo: "https://yt3.googleusercontent.com/RPg3yKu1TZnIa4EPELP48AJEufOBcM-IQ_3T9uNYfLxptKmh2rYa1_Ys0jL-qkNTSnQQvg_cGQ=s900-c-k-c0x00ffffff-no-rj"
+      },
+      { 
+        name: "DD Meghalaya (504p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/4f81bc8d13dd49b484da35988abb8729/index.m3u8",
+        logo: "https://yt3.googleusercontent.com/ytc/AIdro_nHaPsU4PYRbiCTOd2spcSHHylEU_SbDdjJMjGppgxW3QI=s900-c-k-c0x00ffffff-no-rj"
+      },
+      { 
+        name: "DD Mizoram (504p)", 
+        url: "https://d2lk5u59tns74c.cloudfront.net/out/v1/eea48c6b61074052a2fa8532ff795ff1/index.m3u8",
+        logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLqsFX_QnSod5FVpsj1NN65TNzZ_OnKzBu9pl_044moQ&s"
+      },
+      { 
+        name: "DD Nagaland (504p)", 
+        url: "https://d2lk5u59tns74c.cloudfront.net/out/v1/29c92e0bef954a6d9b0908d1be29c1f0/index.m3u8",
+        logo: "https://yt3.googleusercontent.com/DQ4VC0NrJtKFphfbWEr-Gev8rEuN2DcuMNjmF7YTbkXp_aDVc_hspWxnN7vn0rd6_aM1e644otg=s900-c-k-c0x00ffffff-no-rj"
+      },
+      { 
+        name: "DD National HD (1080p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/40492a64c1db4a1385ba1a397d357d3a/index.m3u8",
+        logo: "https://jiotvimages.cdn.jio.com/dare_images/images/channel/0d6879a796334727d97587283642c3bb.png"
+      },
+      { 
+        name: "DD News HD (1080p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/0811cd8c37ca4c409d5385a6cd2fa18b/index.m3u8",
+        logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQM5SJEl5Qs_61XjdypCwb5TftKTRFNG7LH0fYIpGQSEaRW62eTy8wrkbnc&s=10"
+      },
+      { 
+        name: "DD Odia (504p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/ef4ea632b77a480ebd77106968aa99a9/index.m3u8",
+        logo: "https://jiotvimages.cdn.jio.com/dare_images/images/channel/5b7d5b694c973c75a23f52607882f853.png"
+      },
+      { 
+        name: "DD Punjabi (504p)", 
+        url: "https://d2lk5u59tns74c.cloudfront.net/out/v1/da821c24a59d4e57960497aeaca8fb33/index.m3u8",
+        logo: "https://yt3.googleusercontent.com/ytc/AIdro_nIUJwpzRmyT9RdxpulpEZfNg2v5R5HNUtk4-7KHeQYrxw=s900-c-k-c0x00ffffff-no-rj"
+      },
+      { 
+        name: "DD Rajasthan (504p)", 
+        url: "https://d2lk5u59tns74c.cloudfront.net/out/v1/5b6bbbf682b741ecbe279f75a4a9a3e6/index.m3u8",
+        logo: "https://jiotvimages.cdn.jio.com/dare_images/images/channel/87ec08adc44f0df36e74f60fe3e00a34.png"
+      },
+      { 
+        name: "DD Sahyadri (504p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/66dcc3ebe182447ba42837e746cf0c7c/index.m3u8",
+        logo: "https://jiotvimages.cdn.jio.com/dare_images/images/channel/ad7ca055acec009e223343da70ae9844.png"
+      },
+      { 
+        name: "DD Saptagiri (504p)", 
+        url: "https://d2lk5u59tns74c.cloudfront.net/out/v1/26e915d6d12b4a06822c5e33c088ed56/index.m3u8",
+        logo: "https://yt3.googleusercontent.com/khVUhkN-lnIN3RWAlAXqKm4ucklhb7xBYoiVr06toWXlxbZyFGu4Vh6m2x7ZZouNDxdZ9ufvrw=s900-c-k-c0x00ffffff-no-rj"
+      },
+      { 
+        name: "DD Sports SD (1080p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/b17adfe543354fdd8d189b110617cddd/index.m3u8",
+        logo: "https://jiotvimages.cdn.jio.com/dare_images/images/channel/7fbf0410e7b133f9bf8e6468dfe3996e.png"
+      },
+      { 
+        name: "DD Tamil (1080p)", 
+        url: "https://d2lk5u59tns74c.cloudfront.net/out/v1/abf46b14847e45499f4a47f3a9afe93d/index.m3u8",
+        logo: "https://yt3.googleusercontent.com/gOPDl0p0Ssungy3AfKG9MNHeW1QEwRmoFw0_dwDsUulDPE5Hv9nicA3MCjYyzYInzw8kbd5C=s900-c-k-c0x00ffffff-no-rj"
+      },
+      { 
+        name: "DD Tripura (504p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/52b998e9510d41c29ad2ceca8ea3d849/index.m3u8",
+        logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQAVHA7bjxcDdhNZDIogN1J40QR0GN3ofRhAfAE8JQR9A&s=10"
+      },
+      { 
+        name: "DD Urdu (504p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/9b91e9007e754db39a8b32c6bfc5b24a/index.m3u8",
+        logo: "https://yt3.googleusercontent.com/b9hSqyO7V5TpkxyAOeOD2dJpjwwQ_JPQx1ggbDoxywPpW9r6pk0-AjUgUUt7hxkp7KH1UD-s=s900-c-k-c0x00ffffff-no-rj"
+      },
+      { 
+        name: "DD Uttar Pradesh (504p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/70d4f6874fa64032a685e3123520f07d/index.m3u8",
+        logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSdWuy9pCzzy7yLvZigKnpjJJLJFE2yCVgAaqvYS9fnag&s=10"
+      },
+      { 
+        name: "DD Uttarakhand (504p)", 
+        url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/a70323c56ac647c2a8c8fc34e4c73912/index.m3u8",
+        logo: "https://yt3.googleusercontent.com/ytc/AIdro_kDOnSgGjMHvYqYWZl-vI_TaYmg5pSoUvP_Z5_OdmnBLl4q=s900-c-k-c0x00ffffff-no-rj"
+      },
+      { 
+        name: "DD Yadagiri (504p)", 
+        url: "https://d2lk5u59tns74c.cloudfront.net/out/v1/c89fa6d6f5864ac29670d6f91cb7e32a/index.m3u8",
+        logo: "https://yt3.googleusercontent.com/9uY9jCq0_1YlzQMlHsBcdH9Ow15GyKKNr6Fsx_Q4-54DhxniXfRjn0h8dgKuaWFcH4ZEBd9Jhg=s900-c-k-c0x00ffffff-no-rj"
+      }
+    ];
+
+    // DOM Elements
+    const grid = document.getElementById("channelGrid");
+    const modal = document.getElementById("videoModal");
+    const video = document.getElementById("videoPlayer");
+    const channelLogoEl = document.getElementById("currentChannelLogo");
+    const closeModalBtn = document.getElementById("closeModal");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const muteBtn = document.getElementById("muteBtn");
+    const volumeSlider = document.getElementById("volumeSlider");
+    const fullscreenBtn = document.getElementById("fullscreenBtn");
+
+    let currentIndex = 0;
+    let hls = null;
+
+    // Render Channel Cards
+    channels.forEach((channel, index) => {
+      const card = document.createElement("div");
+      card.className = "channel-card";
+      card.title = channel.name;
+      card.innerHTML = `<img class="channel-logo" src="${channel.logo}" alt="${channel.name}" loading="lazy" />`;
+      card.addEventListener("click", () => openPlayer(index));
+      grid.appendChild(card);
+    });
+
+    // Play Stream via HLS.js or Native
+    function playChannel(index) {
+      currentIndex = index;
+      const channel = channels[currentIndex];
+      
+      channelLogoEl.src = channel.logo;
+      channelLogoEl.alt = channel.name;
+
+      if (hls) {
+        hls.destroy();
+      }
+
+      if (Hls.isSupported()) {
+        hls = new Hls();
+        hls.loadSource(channel.url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(() => {});
+        });
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        // Native Safari/iOS support
+        video.src = channel.url;
+        video.addEventListener("loadedmetadata", () => {
+          video.play().catch(() => {});
+        });
+      }
+    }
+
+    // Open Modal
+    function openPlayer(index) {
+      modal.classList.add("active");
+      playChannel(index);
+    }
+
+    // Close Modal & Reset Video
+    function closePlayer() {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+      modal.classList.remove("active");
+      if (hls) {
+        hls.destroy();
+        hls = null;
+      }
+      video.pause();
+      video.src = "";
+    }
+
+    // Navigation Events
+    prevBtn.addEventListener("click", () => {
+      let prevIndex = currentIndex - 1;
+      if (prevIndex < 0) prevIndex = channels.length - 1;
+      playChannel(prevIndex);
+    });
+
+    nextBtn.addEventListener("click", () => {
+      let nextIndex = (currentIndex + 1) % channels.length;
+      playChannel(nextIndex);
+    });
+
+    // Volume & Mute Controls
+    volumeSlider.addEventListener("input", (e) => {
+      video.volume = parseFloat(e.target.value);
+      video.muted = video.volume === 0;
+      muteBtn.textContent = video.muted ? "🔇" : "🔊";
+    });
+
+    muteBtn.addEventListener("click", () => {
+      video.muted = !video.muted;
+      muteBtn.textContent = video.muted ? "🔇" : "🔊";
+      volumeSlider.value = video.muted ? 0 : video.volume;
+    });
+
+    // Fullscreen Trigger
+    fullscreenBtn.addEventListener("click", () => {
+      if (!document.fullscreenElement) {
+        if (video.requestFullscreen) {
+          video.requestFullscreen();
+        } else if (video.webkitRequestFullscreen) {
+          video.webkitRequestFullscreen();
+        } else if (video.webkitEnterFullscreen) {
+          video.webkitEnterFullscreen();
+        } else if (video.msRequestFullscreen) {
+          video.msRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+    });
+
+    // Modal Close Triggers
+    closeModalBtn.addEventListener("click", closePlayer);
+
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        closePlayer();
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modal.classList.contains("active")) {
+        closePlayer();
+      }
+    });
+  </script>
+</body>
+</html>
