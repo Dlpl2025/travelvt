@@ -2,24 +2,29 @@
 <html lang="bn">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Sony Walkman Cloud Player</title>
   <style>
-    /* ১. ফন্ট ডিক্লেয়ারেশন */
     @font-face {
-      font-family: 'Olde English Regular';
-      src: url('OldeEnglish.ttf') format('truetype'),
-           url('OldeEnglish.otf') format('opentype'),
-           local('Olde English Regular'),
-           local('OldeEnglish');
+      font-family: 'Olde English Custom';
+      src: local('Olde English Regular'),
+           local('Olde English'),
+           local('OldeEnglish'),
+           url('Olde%20English%20Regular.ttf') format('truetype'),
+           url('Olde English Regular.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
     }
 
     @font-face {
-      font-family: 'Li Subha Letterpress Unicode';
-      src: url('LiSubhaLetterpress.ttf') format('truetype'),
-           url('LiSubhaLetterpress.otf') format('opentype'),
-           local('Li Subha Letterpress Unicode'),
-           local('শুভ_লেটারপ্রেস_Li_Subha_Letterpress_Unicode');
+      font-family: 'Subha Letterpress Custom';
+      src: local('Li Subha Letterpress Unicode'),
+           local('শুভ_লেটারপ্রেস_Li_Subha_Letterpress_Unicode'),
+           local('LiSubhaLetterpressUnicode'),
+           url('%E0%A6%B6%E0%A7%81%E0%A6%AD_%E0%A6%B2%E0%A7%87%E0%A6%9F%E0%A6%BE%E0%A6%B0%E0%A6%AA%E0%A7%8D%E0%A6%B0%E0%A7%87%E0%A6%B8_Li_Subha_Letterpress_Unicode.ttf') format('truetype'),
+           url('শুভ_লেটারপ্রেস_Li_Subha_Letterpress_Unicode.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
     }
 
     * {
@@ -30,47 +35,58 @@
       -webkit-tap-highlight-color: transparent;
     }
 
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #090b10;
+    }
+
     body {
-      background: radial-gradient(circle at center, #1b2029, #090b10);
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
-      padding: 20px;
     }
 
-    /* ২. Sony Walkman লাল মেটালিক বডি */
+    /* Walkman Fullscreen Body */
     .walkman-device {
       position: relative;
       width: 100%;
-      max-width: 320px;
-      height: 640px;
+      height: 100%;
+      max-width: 480px; /* ডেস্কটপে স্বাভাবিক রাখবে, মোবাইলে ফুলস্ক্রিন */
       background: linear-gradient(135deg, #c7142d 0%, #870517 50%, #46010a 100%);
-      border-radius: 46px;
-      padding: 24px 18px 20px 18px;
-      box-shadow: 
-        inset 3px 3px 6px rgba(255, 255, 255, 0.4),
-        inset -5px -5px 12px rgba(0, 0, 0, 0.7),
-        0 20px 50px rgba(0, 0, 0, 0.8),
-        0 0 15px rgba(218, 20, 50, 0.3);
+      padding: env(safe-area-inset-top, 14px) 14px env(safe-area-inset-bottom, 14px) 14px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      border: 2px solid #5a0410;
+      box-shadow: inset 2px 2px 5px rgba(255, 255, 255, 0.3), inset -3px -3px 8px rgba(0, 0, 0, 0.7);
     }
 
-    /* ডিসপ্লে স্ক্রিন ফ্রেম */
+    @media (min-width: 500px) {
+      body {
+        padding: 20px;
+      }
+      .walkman-device {
+        height: 94vh;
+        max-height: 780px;
+        border-radius: 44px;
+        border: 2px solid #5a0410;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 15px rgba(218, 20, 50, 0.3);
+      }
+    }
+
+    /* Screen Area */
     .screen-bezel {
       width: 100%;
-      height: 330px;
+      flex: 1.35; /* স্ক্রিনটিকে বড় করা হয়েছে */
+      min-height: 0;
       background: #020305;
-      border-radius: 16px;
-      padding: 10px;
+      border-radius: 14px;
+      padding: 8px 10px;
       display: flex;
       flex-direction: column;
-      border: 2px solid #2b2b2b;
-      box-shadow: inset 0 0 12px #000;
-      position: relative;
+      border: 2px solid #242830;
+      box-shadow: inset 0 0 10px #000;
     }
 
     .status-bar {
@@ -78,34 +94,60 @@
       justify-content: space-between;
       align-items: center;
       color: #9aa0a6;
-      font-size: 11px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       padding-bottom: 4px;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
 
     .home-title {
-      font-family: 'Olde English Regular', serif;
-      font-size: 16px;
-      letter-spacing: 0.5px;
+      font-family: 'Olde English Custom', serif !important;
+      font-size: 18px;
       color: #e8eaed;
+      letter-spacing: 0.5px;
     }
 
-    /* অডিও স্ট্রীম প্লেয়ার এরিয়া */
+    .track-counter {
+      font-family: 'Olde English Custom', serif;
+      font-size: 12px;
+      color: #9aa0a6;
+    }
+
+    .now-playing {
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    .track-title {
+      font-family: 'Subha Letterpress Custom', 'Olde English Custom', sans-serif !important;
+      font-size: 14px;
+      color: #58a6ff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 0 4px;
+    }
+
+    .track-status {
+      font-family: 'Subha Letterpress Custom', sans-serif;
+      font-size: 10px;
+      color: #e3b341;
+    }
+
     .stream-wrapper {
       position: relative;
       width: 100%;
-      height: 48px;
+      height: 44px;
       border-radius: 8px;
       overflow: hidden;
       background: #0d1117;
       margin-bottom: 6px;
       border: 1px solid #21262d;
+      flex-shrink: 0;
     }
 
     .stream-frame {
       width: 100%;
-      height: 48px;
+      height: 44px;
       border: none;
     }
 
@@ -119,32 +161,13 @@
       z-index: 10;
     }
 
-    .now-playing {
-      text-align: center;
-      margin-bottom: 4px;
-    }
-
-    .track-title {
-      font-family: 'Li Subha Letterpress Unicode', 'Olde English Regular', sans-serif;
-      font-size: 13px;
-      color: #58a6ff;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .track-status {
-      font-size: 10px;
-      color: #e3b341;
-    }
-
-    /* প্লেলিস্ট ভিউ */
+    /* Playlist Scrollable Area */
     .playlist-wrapper {
       flex: 1;
       overflow-y: auto;
       border-top: 1px solid rgba(255, 255, 255, 0.1);
-      margin-top: 4px;
       padding-top: 4px;
+      -webkit-overflow-scrolling: touch;
     }
 
     .playlist-wrapper::-webkit-scrollbar { width: 3px; }
@@ -155,10 +178,10 @@
     }
 
     .playlist li {
-      font-family: 'Li Subha Letterpress Unicode', 'Olde English Regular', sans-serif;
-      font-size: 11px;
-      padding: 6px 8px;
-      border-radius: 5px;
+      font-family: 'Subha Letterpress Custom', 'Olde English Custom', sans-serif !important;
+      font-size: 13px;
+      padding: 7px 8px;
+      border-radius: 6px;
       margin-bottom: 4px;
       background: rgba(255, 255, 255, 0.03);
       color: #c9d1d9;
@@ -174,49 +197,47 @@
       font-weight: bold;
     }
 
-    /* ৩. SONY ব্র্যান্ড লোগো */
+    /* SONY Logo */
     .sony-brand {
-      font-family: 'Olde English Regular', serif;
+      font-family: 'Olde English Custom', serif !important;
       color: #d1d5db;
       font-size: 20px;
-      margin: 10px 0 6px 0;
+      margin: 6px 0 4px 0;
       letter-spacing: 2px;
       text-shadow: 0 1px 2px #000;
+      flex-shrink: 0;
     }
 
-    /* ৪. লোয়ার কন্ট্রোল প্যানেল (কালো সেকশন) */
+    /* Control Deck Area */
     .control-deck {
       width: 100%;
-      flex: 1;
+      flex: 0.9;
       background: #121418;
-      border-radius: 18px;
-      padding: 12px 10px;
+      border-radius: 16px;
+      padding: 8px 12px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       border: 1px solid #23272e;
       box-shadow: inset 0 2px 6px rgba(0,0,0,0.8);
-      position: relative;
+      flex-shrink: 0;
     }
 
     .top-buttons {
       display: flex;
       justify-content: space-between;
-      padding: 0 10px;
+      padding: 0 4px;
     }
 
     .pill-btn {
       background: #21262d;
       border: 1px solid #30363d;
       color: #8b949e;
-      font-size: 9px;
-      padding: 5px 12px;
+      font-size: 11px;
+      padding: 5px 14px;
       border-radius: 12px;
       cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      font-family: 'Olde English Regular', sans-serif;
+      font-family: 'Olde English Custom', serif !important;
       box-shadow: 0 2px 4px rgba(0,0,0,0.4);
     }
 
@@ -225,25 +246,24 @@
       color: #fff;
     }
 
-    /* ৫. সেন্টার সার্কুলার কী-প্যাড (D-Pad) */
     .dpad-container {
       display: flex;
       justify-content: center;
       align-items: center;
-      margin: 4px 0;
+      margin: 2px 0;
     }
 
     .dpad {
       position: relative;
-      width: 100px;
-      height: 100px;
+      width: 90px;
+      height: 90px;
       background: #161b22;
       border-radius: 50%;
       border: 2px solid #30363d;
       display: flex;
       justify-content: center;
       align-items: center;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.6);
     }
 
     .dpad-btn {
@@ -256,43 +276,40 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 28px;
-      height: 28px;
+      width: 26px;
+      height: 26px;
     }
 
     .dpad-btn:active { color: #58a6ff; }
-    .dpad-up { top: 4px; }
-    .dpad-down { bottom: 4px; }
-    .dpad-left { left: 4px; }
-    .dpad-right { right: 4px; }
+    .dpad-up { top: 3px; }
+    .dpad-down { bottom: 3px; }
+    .dpad-left { left: 3px; }
+    .dpad-right { right: 3px; }
 
-    /* মেটালিক প্লে/পজ সেন্টার বাটন */
     .center-play-btn {
-      width: 38px;
-      height: 38px;
+      width: 34px;
+      height: 34px;
       background: linear-gradient(145deg, #e6e8ea, #8a9096);
-      border-radius: 8px;
+      border-radius: 7px;
       border: 1px solid #fff;
       display: flex;
       justify-content: center;
       align-items: center;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.7);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.7);
       color: #161b22;
-      font-size: 14px;
+      font-size: 13px;
       cursor: pointer;
     }
 
     .center-play-btn:active {
       background: #8a9096;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
     }
 
-    /* ৬. Walkman 'W' লোগো */
     .walkman-logo {
       text-align: right;
-      padding-right: 14px;
-      font-family: 'Olde English Regular', serif;
-      font-size: 18px;
+      padding-right: 10px;
+      font-family: 'Olde English Custom', serif !important;
+      font-size: 16px;
       color: #e6edf3;
       letter-spacing: 1px;
       font-style: italic;
@@ -302,14 +319,11 @@
 </head>
 <body oncontextmenu="return false;">
 
-  <!-- Walkman বডি শুরু -->
   <div class="walkman-device">
-
-    <!-- স্ক্রিন এরিয়া -->
     <div class="screen-bezel">
       <div class="status-bar">
         <span class="home-title">Walkman Music</span>
-        <span id="song-count">0 Tracks</span>
+        <span class="track-counter" id="song-count">0 Tracks</span>
       </div>
 
       <div class="now-playing">
@@ -317,29 +331,24 @@
         <div class="track-status" id="status-text">প্লেয়ার প্রস্তুত হচ্ছে...</div>
       </div>
 
-      <!-- ক্লাউড স্ট্রিমিং ফ্রেম -->
       <div class="stream-wrapper">
         <iframe id="stream-frame" class="stream-frame" src="" allow="autoplay"></iframe>
         <div class="drive-popout-blocker"></div>
       </div>
 
-      <!-- ড্রাইভ ফাইল ও ফোল্ডার তালিকা -->
       <div class="playlist-wrapper">
         <ul class="playlist" id="playlist"></ul>
       </div>
     </div>
 
-    <!-- SONY টেক্সট -->
     <div class="sony-brand">SONY</div>
 
-    <!-- কিপ্যাড কন্ট্রোল ডেক -->
     <div class="control-deck">
       <div class="top-buttons">
         <button class="pill-btn" id="home-btn">HOME</button>
         <button class="pill-btn" id="shuffle-btn">SHUFFLE</button>
       </div>
 
-      <!-- সার্কুলার কন্ট্রোলার -->
       <div class="dpad-container">
         <div class="dpad">
           <button class="dpad-btn dpad-up" id="up-btn">▲</button>
@@ -350,10 +359,8 @@
         </div>
       </div>
 
-      <!-- Walkman 'W' ব্র্যান্ডিং -->
       <div class="walkman-logo">W.</div>
     </div>
-
   </div>
 
   <script>
@@ -420,7 +427,6 @@
       renderPlaylist();
       streamFrame.src = `https://drive.google.com/file/d/${song.driveId}/preview`;
 
-      // প্লেলিস্ট স্ক্রল অ্যাডজাস্ট
       const activeItem = playlistElement.children[index];
       if (activeItem) {
         activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -452,7 +458,6 @@
     downBtn.addEventListener('click', playNext);
     upBtn.addEventListener('click', playPrev);
     centerBtn.addEventListener('click', () => {
-      // সেন্টার বাটন চাপলে গান পুনরায় লোড/প্লে হবে
       loadSong(currentSongIndex);
     });
 
@@ -465,7 +470,6 @@
       }
     });
 
-    // রাইট-ক্লিক ও সোর্স দেখার শর্টকাট লক
     document.addEventListener('keydown', function (e) {
       if ((e.ctrlKey && (e.key === 'u' || e.key === 's')) || e.keyCode === 123) {
         e.preventDefault();
