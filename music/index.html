@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>BD Stream Music Player</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: #080a0f;
+      color: #ffffff;
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Ambient dynamic backdrop glow */
+    .backdrop-glow {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-size: cover;
+      background-position: center;
+      filter: blur(80px) brightness(0.28);
+      transform: scale(1.15);
+      z-index: 0;
+      transition: background-image 0.8s ease-in-out;
+    }
+
+    .app-shell {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* Top Action Bar */
+    .top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 36px;
+    }
+
+    .icon-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #e2e8f0;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      transform: scale(1.05);
+    }
+
+    .timer-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #cbd5e1;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: all 0.2s;
+    }
+
+    .timer-pill:hover {
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+    }
+
+    /* Main Now Playing View */
+    .player-canvas {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 24px 120px;
+      max-width: 580px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .album-art-wrap {
+      position: relative;
+      width: 320px;
+      height: 320px;
+      max-width: 80vw;
+      max-height: 80vw;
+      border-radius: 20px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(0,0,0,0.4);
+      margin-bottom: 36px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .album-art-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .meta-area {
+      text-align: center;
+      width: 100%;
+      margin-bottom: 24px;
+    }
+
+    .meta-area .artist-name {
+      color: #94a3b8;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .marquee-container {
+      width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .track-title {
+      font-size: 26px;
+      font-weight: 700;
+      color: #ffffff;
+      display: inline-block;
+      animation: marquee 14s linear infinite;
+    }
+
+    @keyframes marquee {
+      0% { transform: translateX(10%); }
+      50% { transform: translateX(-35%); }
+      100% { transform: translateX(10%); }
+    }
+
+    /* Progress & Scrubber */
+    .scrubber-zone {
+      width: 100%;
+      margin-bottom: 28px;
+    }
+
+    .range-slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 5px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.15);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .range-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #ffffff;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+      transition: transform 0.1s;
+    }
+
+    .range-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.3);
+    }
+
+    .time-indicators {
+      display: flex;
+      justify-content: space-between;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+
+    /* Main Transport Controls */
+    .transport-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .transport-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .transport-btn:hover {
+      color: #ffffff;
+    }
+
+    .play-pause-circle {
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      background: #ffffff;
+      color: #0b0f19;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(255, 255, 255, 0.25);
+      transition: transform 0.15s, background-color 0.2s;
+    }
+
+    .play-pause-circle:hover {
+      transform: scale(1.06);
+      background-color: #f1f5f9;
+    }
+
+    /* Bottom Dock Bar */
+    .dock-strip {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(10, 14, 23, 0.88);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+    }
+
+    .dock-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      max-width: 280px;
+    }
+
+    .dock-left img {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+
+    .dock-left .dock-meta {
+      overflow: hidden;
+    }
+
+    .dock-left .dock-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dock-left .dock-sub {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    .dock-actions {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .dock-actions button {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 18px;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .dock-actions button:hover {
+      color: #fff;
+    }
+
+    /* Track Drawer (Playlist) */
+    .drawer-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      z-index: 20;
+      display: none;
+    }
+
+    .drawer-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      max-width: 620px;
+      margin: 0 auto;
+      background: #111726;
+      border-radius: 24px 24px 0 0;
+      padding: 24px;
+      max-height: 75vh;
+      overflow-y: auto;
+      z-index: 21;
+      display: none;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .drawer-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .drawer-item:hover, .drawer-item.active {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .drawer-item img {
+      width: 46px;
+      height: 46px;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+
+    /* Modal (Sleep Timer) */
+    .modal-box {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #151d2e;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      width: 90%;
+      max-width: 440px;
+      padding: 24px;
+      z-index: 30;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.7);
+      display: none;
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .timer-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .timer-opt-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #e2e8f0;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+
+    .timer-opt-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: #38bdf8;
+    }
+
+    /* Notification Toast */
+    .toast-banner {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 10px 20px;
+      border-radius: 30px;
+      font-size: 13px;
+      color: #f8fafc;
+      z-index: 50;
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    .toast-banner.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Mobile Responsive Customization */
+    @media (max-width: 480px) {
+      .top-nav {
+        padding: 16px 20px;
+      }
+
+      .album-art-wrap {
+        width: 250px;
+        height: 250px;
+        margin-bottom: 24px;
+      }
+
+      .track-title {
+        font-size: 21px;
+      }
+
+      .player-canvas {
+        padding: 10px 20px 105px;
+      }
+
+      .transport-bar {
+        max-width: 100%;
+        padding: 0 10px;
+      }
+
+      .play-pause-circle {
+        width: 56px;
+        height: 56px;
+        font-size: 20px;
+      }
+
+      .dock-strip {
+        padding: 10px 18px;
+      }
+
+      .dock-left {
+        max-width: 200px;
+      }
+
+      .modal-box {
+        width: 92%;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Blurred Artwork Ambient Background -->
+  <div class="backdrop-glow" id="backdropGlow"></div>
+
+  <div class="app-shell">
+    
+    <!-- Top Action Bar -->
+    <div class="top-nav">
+      <button class="icon-btn" onclick="toggleDrawer()"><i class="fa-solid fa-list-ul"></i></button>
+      
+      <div class="timer-pill" onclick="toggleTimerModal()">
+        <i class="fa-regular fa-clock"></i>
+        <span id="timerStatusText">Sleep timer</span>
+      </div>
+
+      <div style="display:flex; gap:12px;">
+        <button class="icon-btn" onclick="toggleFavorite()"><i id="favIcon" class="fa-regular fa-heart"></i></button>
+        <button class="icon-btn" onclick="shareSong()"><i class="fa-solid fa-share-nodes"></i></button>
+      </div>
+    </div>
+
+    <!-- Center Player View -->
+    <div class="player-canvas">
+      <div class="album-art-wrap">
+        <img id="coverImg" src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600" alt="Cover" />
+      </div>
+
+      <div class="meta-area">
+        <div class="artist-name" id="artistLabel">শিল্পী লোড হচ্ছে</div>
+        <div class="marquee-container">
+          <div class="track-title" id="titleLabel">গান লোড হচ্ছে...</div>
+        </div>
+      </div>
+
+      <div class="scrubber-zone">
+        <input type="range" class="range-slider" id="progressBar" value="0" min="0" max="100" />
+        <div class="time-indicators">
+          <span id="currentTimeLabel">0:00</span>
+          <span id="totalDurationLabel">0:00</span>
+        </div>
+      </div>
+
+      <div class="transport-bar">
+        <button class="transport-btn" onclick="toggleShuffle()"><i id="shuffleIcon" class="fa-solid fa-shuffle"></i></button>
+        <button class="transport-btn" onclick="prevTrack()"><i class="fa-solid fa-backward-step fa-xl"></i></button>
+        <button class="play-pause-circle" onclick="togglePlay()"><i id="playIcon" class="fa-solid fa-play"></i></button>
+        <button class="transport-btn" onclick="nextTrack()"><i class="fa-solid fa-forward-step fa-xl"></i></button>
+        <button class="transport-btn" onclick="toggleLoop()"><i id="loopIcon" class="fa-solid fa-repeat"></i></button>
+      </div>
+    </div>
+
+    <!-- Bottom Persistent Dock -->
+    <div class="dock-strip">
+      <div class="dock-left">
+        <img id="dockCover" src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=100" />
+        <div class="dock-meta">
+          <div class="dock-title" id="dockTitle">কোনো গান সিলেক্ট করা নেই</div>
+          <div class="dock-sub" id="dockArtist">bdstream</div>
+        </div>
+      </div>
+
+      <div class="dock-actions">
+        <button onclick="togglePlay()"><i id="dockPlayIcon" class="fa-solid fa-play"></i></button>
+        <button onclick="toggleDrawer()"><i class="fa-solid fa-bars-staggered"></i></button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Audio Element -->
+  <audio id="coreAudio" preload="metadata"></audio>
+
+  <!-- Notification Toast -->
+  <div class="toast-banner" id="toastBanner">
+    <i class="fa-solid fa-circle-check" style="color: #38bdf8;"></i>
+    <span id="toastMsg">Sleep timer set</span>
+  </div>
+
+  <!-- Playlist Drawer -->
+  <div class="drawer-overlay" id="drawerOverlay" onclick="toggleDrawer()"></div>
+  <div class="drawer-panel" id="drawerPanel">
+    <h3 style="margin-bottom:16px; font-size:16px; color:#94a3b8;">PLAYLIST</h3>
+    <div id="drawerList"></div>
+  </div>
+
+  <!-- Sleep Timer Modal -->
+  <div class="modal-box" id="timerModal">
+    <div class="modal-head">
+      <h3 style="font-size:16px;">Sleep timer</h3>
+      <button class="icon-btn" onclick="toggleTimerModal()" style="width:32px; height:32px;"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="timer-grid">
+      <button class="timer-opt-btn" onclick="setTimer(5)"><i class="fa-regular fa-clock"></i> 5 minutes</button>
+      <button class="timer-opt-btn" onclick="setTimer(10)"><i class="fa-regular fa-clock"></i> 10 minutes</button>
+      <button class="timer-opt-btn" onclick="setTimer(15)"><i class="fa-regular fa-clock"></i> 15 minutes</button>
+      <button class="timer-opt-btn" onclick="setTimer(30)"><i class="fa-regular fa-clock"></i> 30 minutes</button>
+      <button class="timer-opt-btn" onclick="setTimer(45)"><i class="fa-regular fa-clock"></i> 45 minutes</button>
+      <button class="timer-opt-btn" onclick="setTimer(60)"><i class="fa-regular fa-clock"></i> 1 hour</button>
+    </div>
+    <button class="timer-opt-btn" style="width:100%; justify-content: center; background: rgba(239, 68, 68, 0.15); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3);" onclick="cancelTimer()">Turn Off Timer</button>
+  </div>
+
+  <script>
+    const LIVE_SERVER = "https://telegram-music-backend-iwjj.onrender.com";
+    const API_URL = `${LIVE_SERVER}/api/songs`;
+    let playlist = [];
+    let currentIndex = 0;
+    let isPlaying = false;
+    let isShuffle = false;
+    let isLoop = false;
+    let timerTimeout = null;
+
+    const audio = document.getElementById("coreAudio");
+    const playIcon = document.getElementById("playIcon");
+    const dockPlayIcon = document.getElementById("dockPlayIcon");
+    const progressBar = document.getElementById("progressBar");
+    const coverImg = document.getElementById("coverImg");
+    const dockCover = document.getElementById("dockCover");
+    const backdropGlow = document.getElementById("backdropGlow");
+    const titleLabel = document.getElementById("titleLabel");
+    const artistLabel = document.getElementById("artistLabel");
+    const dockTitle = document.getElementById("dockTitle");
+    const dockArtist = document.getElementById("dockArtist");
+    const currentTimeLabel = document.getElementById("currentTimeLabel");
+    const totalDurationLabel = document.getElementById("totalDurationLabel");
+
+    function sanitizeUrl(url) {
+      if (!url) return "";
+      return url.replace(/http:\/\/localhost:5000/g, LIVE_SERVER);
+    }
+
+    async function initPlayer() {
+      try {
+        const res = await fetch(API_URL);
+        const rawPlaylist = await res.json();
+
+        // ডেটাবেস থেকে আসা প্রতিটি অডিও ও ছবির লোকাল পাথ লাইভ সার্ভার দিয়ে রিপ্লেস করা
+        playlist = rawPlaylist.map(item => ({
+          ...item,
+          audioUrl: sanitizeUrl(item.audioUrl),
+          coverImage: sanitizeUrl(item.coverImage)
+        }));
+
+        if (playlist.length > 0) {
+          renderDrawer();
+          loadTrack(0, false);
+        } else {
+          titleLabel.innerText = "চ্যানেলে কোনো গান নেই";
+        }
+      } catch (err) {
+        titleLabel.innerText = "সার্ভার কানেক্ট করা যায়নি";
+      }
+    }
+
+    function loadTrack(index, autoPlay = true) {
+      if (!playlist[index]) return;
+      currentIndex = index;
+      const track = playlist[index];
+
+      const cover = track.coverImage || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600";
+      coverImg.src = cover;
+      dockCover.src = cover;
+      backdropGlow.style.backgroundImage = `url('${cover}')`;
+
+      titleLabel.innerText = track.title;
+      artistLabel.innerText = `${track.artist} • ${track.album || 'bdstream'}`;
+      dockTitle.innerText = track.title;
+      dockArtist.innerText = track.artist;
+
+      audio.src = track.audioUrl;
+      audio.load();
+
+      updateDrawerActive();
+
+      if (autoPlay) {
+        audio.play().then(() => setPlayState(true)).catch(e => console.log(e));
+      } else {
+        setPlayState(false);
+      }
+    }
+
+    function setPlayState(playing) {
+      isPlaying = playing;
+      playIcon.className = playing ? "fa-solid fa-pause" : "fa-solid fa-play";
+      dockPlayIcon.className = playing ? "fa-solid fa-pause" : "fa-solid fa-play";
+    }
+
+    function togglePlay() {
+      if (!audio.src) return;
+      if (audio.paused) {
+        audio.play();
+        setPlayState(true);
+      } else {
+        audio.pause();
+        setPlayState(false);
+      }
+    }
+
+    function nextTrack() {
+      if (playlist.length === 0) return;
+      if (isShuffle) {
+        currentIndex = Math.floor(Math.random() * playlist.length);
+      } else {
+        currentIndex = (currentIndex + 1) % playlist.length;
+      }
+      loadTrack(currentIndex, true);
+    }
+
+    function prevTrack() {
+      if (playlist.length === 0) return;
+      currentIndex = (currentIndex - 1 + playlist.length) % playlist.length;
+      loadTrack(currentIndex, true);
+    }
+
+    audio.addEventListener("timeupdate", () => {
+      if (!isNaN(audio.duration)) {
+        const progress = (audio.currentTime / audio.duration) * 100;
+        progressBar.value = progress;
+        currentTimeLabel.innerText = formatTime(audio.currentTime);
+        totalDurationLabel.innerText = formatTime(audio.duration);
+      }
+    });
+
+    audio.addEventListener("ended", () => {
+      if (isLoop) {
+        audio.currentTime = 0;
+        audio.play();
+      } else {
+        nextTrack();
+      }
+    });
+
+    progressBar.addEventListener("input", () => {
+      if (!isNaN(audio.duration)) {
+        audio.currentTime = (progressBar.value / 100) * audio.duration;
+      }
+    });
+
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    function toggleShuffle() {
+      isShuffle = !isShuffle;
+      document.getElementById("shuffleIcon").style.color = isShuffle ? "#38bdf8" : "#94a3b8";
+    }
+
+    function toggleLoop() {
+      isLoop = !isLoop;
+      document.getElementById("loopIcon").style.color = isLoop ? "#38bdf8" : "#94a3b8";
+    }
+
+    function toggleFavorite() {
+      const fav = document.getElementById("favIcon");
+      if (fav.classList.contains("fa-regular")) {
+        fav.classList.replace("fa-regular", "fa-solid");
+        fav.style.color = "#f43f5e";
+      } else {
+        fav.classList.replace("fa-solid", "fa-regular");
+        fav.style.color = "#e2e8f0";
+      }
+    }
+
+    function shareSong() {
+      if (navigator.clipboard && playlist[currentIndex]) {
+        navigator.clipboard.writeText(window.location.href);
+        showToast("গানটির লিঙ্ক কপি করা হয়েছে!");
+      }
+    }
+
+    function toggleDrawer() {
+      const overlay = document.getElementById("drawerOverlay");
+      const panel = document.getElementById("drawerPanel");
+      const isVisible = panel.style.display === "block";
+      panel.style.display = isVisible ? "none" : "block";
+      overlay.style.display = isVisible ? "none" : "block";
+    }
+
+    function renderDrawer() {
+      const list = document.getElementById("drawerList");
+      list.innerHTML = playlist.map((item, idx) => `
+        <div class="drawer-item ${idx === currentIndex ? 'active' : ''}" onclick="loadTrack(${idx}, true); toggleDrawer();">
+          <img src="${item.coverImage || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=100'}" />
+          <div>
+            <h4 style="font-size:14px; font-weight:600; margin-bottom:2px;">${item.title}</h4>
+            <p style="font-size:12px; color:#94a3b8;">${item.artist}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function updateDrawerActive() {
+      const items = document.querySelectorAll(".drawer-item");
+      items.forEach((item, idx) => item.classList.toggle("active", idx === currentIndex));
+    }
+
+    function toggleTimerModal() {
+      const modal = document.getElementById("timerModal");
+      const overlay = document.getElementById("drawerOverlay");
+      const isVisible = modal.style.display === "block";
+      modal.style.display = isVisible ? "none" : "block";
+      overlay.style.display = isVisible ? "none" : "block";
+    }
+
+    function setTimer(minutes) {
+      if (timerTimeout) clearTimeout(timerTimeout);
+      timerTimeout = setTimeout(() => {
+        audio.pause();
+        setPlayState(false);
+        showToast("Sleep timer: মিউজিক বন্ধ করা হয়েছে");
+      }, minutes * 60 * 1000);
+
+      document.getElementById("timerStatusText").innerText = `${minutes}m left`;
+      toggleTimerModal();
+      showToast(`Sleep timer set for ${minutes} minutes`);
+    }
+
+    function cancelTimer() {
+      if (timerTimeout) clearTimeout(timerTimeout);
+      document.getElementById("timerStatusText").innerText = "Sleep timer";
+      toggleTimerModal();
+      showToast("Sleep timer বন্ধ করা হয়েছে");
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("toastBanner");
+      document.getElementById("toastMsg").innerText = msg;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 3500);
+    }
+
+    initPlayer();
+  </script>
+</body>
+</html>
