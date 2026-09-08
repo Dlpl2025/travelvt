@@ -54,7 +54,53 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 24px 36px;
+      padding: 20px 36px;
+      position: relative;
+    }
+
+    .top-nav-left, .top-nav-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 2;
+    }
+
+    /* Top Center Home Logo Link */
+    .top-nav-center {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+    }
+
+    .home-logo-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 24px;
+      text-decoration: none;
+      backdrop-filter: blur(10px);
+      transition: all 0.2s ease;
+    }
+
+    .home-logo-btn img {
+      height: 26px;
+      width: auto;
+      object-fit: contain;
+      display: block;
+    }
+
+    .home-logo-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+      transform: scale(1.05);
+      border-color: rgba(255, 255, 255, 0.3);
     }
 
     .icon-btn {
@@ -445,7 +491,11 @@
     /* Mobile Responsive Customization */
     @media (max-width: 480px) {
       .top-nav {
-        padding: 16px 20px;
+        padding: 16px 16px;
+      }
+
+      .home-logo-btn img {
+        height: 22px;
       }
 
       .album-art-wrap {
@@ -497,14 +547,24 @@
     
     <!-- Top Action Bar -->
     <div class="top-nav">
-      <button class="icon-btn" onclick="toggleDrawer()"><i class="fa-solid fa-list-ul"></i></button>
-      
-      <div class="timer-pill" onclick="toggleTimerModal()">
-        <i class="fa-regular fa-clock"></i>
-        <span id="timerStatusText">Sleep timer</span>
+      <!-- Left Controls -->
+      <div class="top-nav-left">
+        <button class="icon-btn" onclick="toggleDrawer()" title="প্লেলিস্ট"><i class="fa-solid fa-list-ul"></i></button>
+        <div class="timer-pill" onclick="toggleTimerModal()">
+          <i class="fa-regular fa-clock"></i>
+          <span id="timerStatusText">Sleep timer</span>
+        </div>
       </div>
 
-      <div style="display:flex; gap:12px;">
+      <!-- Center Home Logo -->
+      <div class="top-nav-center">
+        <a href="https://dlpl2025.github.io/travelvt/" class="home-logo-btn" title="হোমপেজে ফিরে যান">
+          <img src="logo.png" alt="Home" onerror="this.outerHTML='<i class=\'fa-solid fa-house\' style=\'color:#fff;font-size:18px;\'></i>'" />
+        </a>
+      </div>
+
+      <!-- Right Controls -->
+      <div class="top-nav-right">
         <button class="icon-btn" onclick="toggleFavorite()"><i id="favIcon" class="fa-regular fa-heart"></i></button>
         <button class="icon-btn" onclick="shareSong()"><i class="fa-solid fa-share-nodes"></i></button>
       </div>
@@ -625,7 +685,6 @@
         const res = await fetch(API_URL);
         const rawPlaylist = await res.json();
 
-        // ডেটাবেস থেকে আসা প্রতিটি অডিও ও ছবির লোকাল পাথ লাইভ সার্ভার দিয়ে রিপ্লেস করা
         playlist = rawPlaylist.map(item => ({
           ...item,
           audioUrl: sanitizeUrl(item.audioUrl),
@@ -639,7 +698,7 @@
           titleLabel.innerText = "চ্যানেলে কোনো গান নেই";
         }
       } catch (err) {
-        titleLabel.innerText = "সার্ভার কানেক্ট করা যায়নি";
+        titleLabel.innerText = "সার্ভার কানেক্ট করা যায়নি";
       }
     }
 
@@ -757,7 +816,7 @@
     function shareSong() {
       if (navigator.clipboard && playlist[currentIndex]) {
         navigator.clipboard.writeText(window.location.href);
-        showToast("গানটির লিঙ্ক কপি করা হয়েছে!");
+        showToast("গানটির লিঙ্ক কপি করা হয়েছে!");
       }
     }
 
@@ -800,7 +859,7 @@
       timerTimeout = setTimeout(() => {
         audio.pause();
         setPlayState(false);
-        showToast("Sleep timer: মিউজিক বন্ধ করা হয়েছে");
+        showToast("Sleep timer: মিউজিক বন্ধ করা হয়েছে");
       }, minutes * 60 * 1000);
 
       document.getElementById("timerStatusText").innerText = `${minutes}m left`;
@@ -812,7 +871,7 @@
       if (timerTimeout) clearTimeout(timerTimeout);
       document.getElementById("timerStatusText").innerText = "Sleep timer";
       toggleTimerModal();
-      showToast("Sleep timer বন্ধ করা হয়েছে");
+      showToast("Sleep timer বন্ধ করা হয়েছে");
     }
 
     function showToast(msg) {
