@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sony Walkman Cloud Player</title>
+  <style>
+    /* ১. ফন্ট ডিক্লেয়ারেশন */
+    @font-face {
+      font-family: 'Olde English Regular';
+      src: url('OldeEnglish.ttf') format('truetype'),
+           url('OldeEnglish.otf') format('opentype'),
+           local('Olde English Regular'),
+           local('OldeEnglish');
+    }
+
+    @font-face {
+      font-family: 'Li Subha Letterpress Unicode';
+      src: url('LiSubhaLetterpress.ttf') format('truetype'),
+           url('LiSubhaLetterpress.otf') format('opentype'),
+           local('Li Subha Letterpress Unicode'),
+           local('শুভ_লেটারপ্রেস_Li_Subha_Letterpress_Unicode');
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: radial-gradient(circle at center, #1b2029, #090b10);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    /* ২. Sony Walkman লাল মেটালিক বডি */
+    .walkman-device {
+      position: relative;
+      width: 100%;
+      max-width: 320px;
+      height: 640px;
+      background: linear-gradient(135deg, #c7142d 0%, #870517 50%, #46010a 100%);
+      border-radius: 46px;
+      padding: 24px 18px 20px 18px;
+      box-shadow: 
+        inset 3px 3px 6px rgba(255, 255, 255, 0.4),
+        inset -5px -5px 12px rgba(0, 0, 0, 0.7),
+        0 20px 50px rgba(0, 0, 0, 0.8),
+        0 0 15px rgba(218, 20, 50, 0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border: 2px solid #5a0410;
+    }
+
+    /* ডিসপ্লে স্ক্রিন ফ্রেম */
+    .screen-bezel {
+      width: 100%;
+      height: 330px;
+      background: #020305;
+      border-radius: 16px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      border: 2px solid #2b2b2b;
+      box-shadow: inset 0 0 12px #000;
+      position: relative;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #9aa0a6;
+      font-size: 11px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 4px;
+      margin-bottom: 6px;
+    }
+
+    .home-title {
+      font-family: 'Olde English Regular', serif;
+      font-size: 16px;
+      letter-spacing: 0.5px;
+      color: #e8eaed;
+    }
+
+    /* অডিও স্ট্রীম প্লেয়ার এরিয়া */
+    .stream-wrapper {
+      position: relative;
+      width: 100%;
+      height: 48px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #0d1117;
+      margin-bottom: 6px;
+      border: 1px solid #21262d;
+    }
+
+    .stream-frame {
+      width: 100%;
+      height: 48px;
+      border: none;
+    }
+
+    .drive-popout-blocker {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 44px;
+      height: 100%;
+      background: #1c202a;
+      z-index: 10;
+    }
+
+    .now-playing {
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    .track-title {
+      font-family: 'Li Subha Letterpress Unicode', 'Olde English Regular', sans-serif;
+      font-size: 13px;
+      color: #58a6ff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track-status {
+      font-size: 10px;
+      color: #e3b341;
+    }
+
+    /* প্লেলিস্ট ভিউ */
+    .playlist-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      margin-top: 4px;
+      padding-top: 4px;
+    }
+
+    .playlist-wrapper::-webkit-scrollbar { width: 3px; }
+    .playlist-wrapper::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+
+    .playlist {
+      list-style: none;
+    }
+
+    .playlist li {
+      font-family: 'Li Subha Letterpress Unicode', 'Olde English Regular', sans-serif;
+      font-size: 11px;
+      padding: 6px 8px;
+      border-radius: 5px;
+      margin-bottom: 4px;
+      background: rgba(255, 255, 255, 0.03);
+      color: #c9d1d9;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .playlist li.active {
+      background: #1f6feb;
+      color: #fff;
+      font-weight: bold;
+    }
+
+    /* ৩. SONY ব্র্যান্ড লোগো */
+    .sony-brand {
+      font-family: 'Olde English Regular', serif;
+      color: #d1d5db;
+      font-size: 20px;
+      margin: 10px 0 6px 0;
+      letter-spacing: 2px;
+      text-shadow: 0 1px 2px #000;
+    }
+
+    /* ৪. লোয়ার কন্ট্রোল প্যানেল (কালো সেকশন) */
+    .control-deck {
+      width: 100%;
+      flex: 1;
+      background: #121418;
+      border-radius: 18px;
+      padding: 12px 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border: 1px solid #23272e;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.8);
+      position: relative;
+    }
+
+    .top-buttons {
+      display: flex;
+      justify-content: space-between;
+      padding: 0 10px;
+    }
+
+    .pill-btn {
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #8b949e;
+      font-size: 9px;
+      padding: 5px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: 'Olde English Regular', sans-serif;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    }
+
+    .pill-btn:active, .pill-btn.active {
+      background: #388bfd;
+      color: #fff;
+    }
+
+    /* ৫. সেন্টার সার্কুলার কী-প্যাড (D-Pad) */
+    .dpad-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 4px 0;
+    }
+
+    .dpad {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      background: #161b22;
+      border-radius: 50%;
+      border: 2px solid #30363d;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+    }
+
+    .dpad-btn {
+      position: absolute;
+      background: transparent;
+      border: none;
+      color: #8b949e;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+    }
+
+    .dpad-btn:active { color: #58a6ff; }
+    .dpad-up { top: 4px; }
+    .dpad-down { bottom: 4px; }
+    .dpad-left { left: 4px; }
+    .dpad-right { right: 4px; }
+
+    /* মেটালিক প্লে/পজ সেন্টার বাটন */
+    .center-play-btn {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(145deg, #e6e8ea, #8a9096);
+      border-radius: 8px;
+      border: 1px solid #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.7);
+      color: #161b22;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .center-play-btn:active {
+      background: #8a9096;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
+    }
+
+    /* ৬. Walkman 'W' লোগো */
+    .walkman-logo {
+      text-align: right;
+      padding-right: 14px;
+      font-family: 'Olde English Regular', serif;
+      font-size: 18px;
+      color: #e6edf3;
+      letter-spacing: 1px;
+      font-style: italic;
+      opacity: 0.85;
+    }
+  </style>
+</head>
+<body oncontextmenu="return false;">
+
+  <!-- Walkman বডি শুরু -->
+  <div class="walkman-device">
+
+    <!-- স্ক্রিন এরিয়া -->
+    <div class="screen-bezel">
+      <div class="status-bar">
+        <span class="home-title">Walkman Music</span>
+        <span id="song-count">0 Tracks</span>
+      </div>
+
+      <div class="now-playing">
+        <div class="track-title" id="current-title">গান লোড হচ্ছে...</div>
+        <div class="track-status" id="status-text">প্লেয়ার প্রস্তুত হচ্ছে...</div>
+      </div>
+
+      <!-- ক্লাউড স্ট্রিমিং ফ্রেম -->
+      <div class="stream-wrapper">
+        <iframe id="stream-frame" class="stream-frame" src="" allow="autoplay"></iframe>
+        <div class="drive-popout-blocker"></div>
+      </div>
+
+      <!-- ড্রাইভ ফাইল ও ফোল্ডার তালিকা -->
+      <div class="playlist-wrapper">
+        <ul class="playlist" id="playlist"></ul>
+      </div>
+    </div>
+
+    <!-- SONY টেক্সট -->
+    <div class="sony-brand">SONY</div>
+
+    <!-- কিপ্যাড কন্ট্রোল ডেক -->
+    <div class="control-deck">
+      <div class="top-buttons">
+        <button class="pill-btn" id="home-btn">HOME</button>
+        <button class="pill-btn" id="shuffle-btn">SHUFFLE</button>
+      </div>
+
+      <!-- সার্কুলার কন্ট্রোলার -->
+      <div class="dpad-container">
+        <div class="dpad">
+          <button class="dpad-btn dpad-up" id="up-btn">▲</button>
+          <button class="dpad-btn dpad-down" id="down-btn">▼</button>
+          <button class="dpad-btn dpad-left" id="prev-btn">◀◀</button>
+          <button class="dpad-btn dpad-right" id="next-btn">▶▶</button>
+          <div class="center-play-btn" id="center-btn">▶Ⅱ</div>
+        </div>
+      </div>
+
+      <!-- Walkman 'W' ব্র্যান্ডিং -->
+      <div class="walkman-logo">W.</div>
+    </div>
+
+  </div>
+
+  <script>
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzS1vc17gIyAI6R3MOzzrPn3pyml-f8MBavP18MbnaYYydhhYuaY6pSMsKBxY4EmXet/exec";
+
+    let songs = [];
+    let currentSongIndex = 0;
+    let isShuffle = false;
+
+    const streamFrame = document.getElementById('stream-frame');
+    const playlistElement = document.getElementById('playlist');
+    const titleElement = document.getElementById('current-title');
+    const statusText = document.getElementById('status-text');
+    const songCount = document.getElementById('song-count');
+    const shuffleBtn = document.getElementById('shuffle-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const prevBtn = document.getElementById('prev-btn');
+    const upBtn = document.getElementById('up-btn');
+    const downBtn = document.getElementById('down-btn');
+    const centerBtn = document.getElementById('center-btn');
+
+    async function fetchDriveSongs() {
+      try {
+        const res = await fetch(APPS_SCRIPT_URL);
+        songs = await res.json();
+
+        if (!Array.isArray(songs) || songs.length === 0) {
+          statusText.textContent = "কোনো গান পাওয়া যায়নি।";
+          titleElement.textContent = "ফোল্ডার খালি";
+          return;
+        }
+
+        songCount.textContent = `${songs.length} Tracks`;
+        statusText.textContent = "গানে ট্যাপ করে প্লে করুন";
+        renderPlaylist();
+        loadSong(0);
+      } catch (err) {
+        console.error(err);
+        statusText.textContent = "তালিকা লোড করতে সমস্যা হয়েছে!";
+      }
+    }
+
+    function renderPlaylist() {
+      playlistElement.innerHTML = '';
+      songs.forEach((song, index) => {
+        const li = document.createElement('li');
+        li.textContent = `${index + 1}. ${song.title}`;
+        if (index === currentSongIndex) li.classList.add('active');
+
+        li.addEventListener('click', () => {
+          loadSong(index);
+        });
+
+        playlistElement.appendChild(li);
+      });
+    }
+
+    function loadSong(index) {
+      currentSongIndex = index;
+      const song = songs[index];
+      titleElement.textContent = song.title;
+      statusText.textContent = "প্লেয়ার প্রস্তুত...";
+
+      renderPlaylist();
+      streamFrame.src = `https://drive.google.com/file/d/${song.driveId}/preview`;
+
+      // প্লেলিস্ট স্ক্রল অ্যাডজাস্ট
+      const activeItem = playlistElement.children[index];
+      if (activeItem) {
+        activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    function playNext() {
+      if (songs.length === 0) return;
+      if (isShuffle) {
+        let randomIndex = Math.floor(Math.random() * songs.length);
+        if (songs.length > 1 && randomIndex === currentSongIndex) {
+          randomIndex = (randomIndex + 1) % songs.length;
+        }
+        loadSong(randomIndex);
+      } else {
+        const nextIndex = (currentSongIndex + 1) % songs.length;
+        loadSong(nextIndex);
+      }
+    }
+
+    function playPrev() {
+      if (songs.length === 0) return;
+      const prevIndex = (currentSongIndex - 1 + songs.length) % songs.length;
+      loadSong(prevIndex);
+    }
+
+    nextBtn.addEventListener('click', playNext);
+    prevBtn.addEventListener('click', playPrev);
+    downBtn.addEventListener('click', playNext);
+    upBtn.addEventListener('click', playPrev);
+    centerBtn.addEventListener('click', () => {
+      // সেন্টার বাটন চাপলে গান পুনরায় লোড/প্লে হবে
+      loadSong(currentSongIndex);
+    });
+
+    shuffleBtn.addEventListener('click', () => {
+      isShuffle = !isShuffle;
+      if (isShuffle) {
+        shuffleBtn.classList.add('active');
+      } else {
+        shuffleBtn.classList.remove('active');
+      }
+    });
+
+    // রাইট-ক্লিক ও সোর্স দেখার শর্টকাট লক
+    document.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey && (e.key === 'u' || e.key === 's')) || e.keyCode === 123) {
+        e.preventDefault();
+      }
+    });
+
+    fetchDriveSongs();
+  </script>
+</body>
+</html>
