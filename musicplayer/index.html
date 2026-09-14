@@ -45,16 +45,36 @@
         <!-- Song list loaded dynamically -->
     </main>
 
+    <!-- Bottom Sticky Mini Player Bar -->
+    <div class="mini-player" id="miniPlayer">
+        <div class="mini-left" id="miniOpenBtn" title="Open Fullscreen Player">
+            <img id="miniThumb" src="icon.png" alt="Cover Artwork">
+            <div class="mini-info">
+                <h4 id="miniTitle">Song Title</h4>
+                <p id="miniArtist">Artist Name</p>
+            </div>
+        </div>
+        <div class="mini-controls">
+            <button id="miniPrevBtn" class="mini-ctrl-btn" title="Previous">⏮</button>
+            <button id="miniPlayPauseBtn" class="mini-ctrl-btn mini-play-btn" title="Play/Pause">⏸</button>
+            <button id="miniNextBtn" class="mini-ctrl-btn" title="Next">⏭</button>
+        </div>
+    </div>
+
     <!-- FULL SCREEN IMMERSIVE MUSIC PLAYER -->
     <div class="fullscreen-player" id="fullscreenPlayer">
+        <!-- Dynamic Blurred Background Layer -->
+        <div class="fs-bg-blur" id="fsBgBlur"></div>
+
         <!-- Top Navigation -->
         <div class="fs-top-bar">
             <span class="fs-tag">Now Playing</span>
-            <button id="closePlayerBtn" class="fs-close-btn" title="Close & Stop">✕</button>
+            <button id="closePlayerBtn" class="fs-close-btn" title="Minimize to Bottom Bar">✕</button>
         </div>
 
-        <!-- Center: Rotating Disc Artwork & Fixed Center Icon -->
+        <!-- Center: Dynamic Audio Visualizer & Rotating Disc Artwork -->
         <div class="fs-visualizer-area">
+            <canvas id="audioVisualizerCanvas" class="fs-visualizer-canvas"></canvas>
             <div class="vinyl-record" id="vinylDisc">
                 <img id="currentThumb" src="icon.png" alt="Cover Artwork" class="vinyl-thumb">
             </div>
@@ -66,7 +86,9 @@
         <!-- Track Information -->
         <div class="fs-meta">
             <h2 id="currentTitle">No song selected</h2>
-            <p id="currentArtist">Music Player</p>
+            <div id="currentArtist" class="artist-marquee-container">
+                <span class="artist-marquee-content">Music Player</span>
+            </div>
         </div>
 
         <!-- Progress Bar -->
@@ -91,10 +113,22 @@
             </button>
         </div>
 
-        <!-- Bottom Actions (Queue on Left, Download on Right) -->
+        <!-- Bottom Actions (Lyrics on Left, Queue & Download on Right) -->
         <div class="fs-bottom-bar">
+            <button id="lyricsToggleBtn" class="fs-action-btn" title="View Lyrics">🎤 Lyrics</button>
             <button id="queueToggleBtn" class="fs-action-btn" title="View Queue">📑 Queue</button>
             <button id="downloadBtn" class="fs-action-btn" title="Download Song">⬇ Download</button>
+        </div>
+
+        <!-- Slide-up Lyrics Drawer -->
+        <div class="lyrics-drawer" id="lyricsDrawer">
+            <div class="queue-header">
+                <h3>Song Lyrics</h3>
+                <button id="closeLyricsBtn" class="close-queue-btn">✕</button>
+            </div>
+            <div class="lyrics-content" id="lyricsContent">
+                <p class="lyrics-line">No lyrics available for this song.</p>
+            </div>
         </div>
 
         <!-- Slide-up Queue Drawer -->
@@ -110,15 +144,13 @@
     </div>
 
     <!-- Hidden Audio Element -->
-    <audio id="audioSource"></audio>
+    <audio id="audioSource" crossorigin="anonymous"></audio>
 
     <!-- Footer -->
     <footer class="footer">
-        <p>&copy; 2026 <strong>music.bdey.online</strong></p>
+        <p>&copy; 2026 <strong>music.bdey.online</strong> | Powered by Balaram Dey</p>
     </footer>
 
-    <!-- Browser ID3 Metadata Injector -->
-    <script src="https://cdn.jsdelivr.net/npm/browser-id3-writer@4.4.0/dist/browser-id3-writer.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
