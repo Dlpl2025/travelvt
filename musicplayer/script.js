@@ -89,6 +89,77 @@ function getArtistNames(item) {
 }
 
 // -------------------------------------------------------------
+// MEDIA SESSION API (Lock Screen & Notification Controls)
+// -------------------------------------------------------------
+function updateMediaSession(song, thumbUrl) {
+    if ('mediaSession' in navigator) {
+        const title = sanitize(song.name || song.title || "Unknown Track");
+        const artist = sanitize(getArtistNames(song) || "Online Music Player");
+        const album = sanitize(song.album?.name || song.name || "Music Player");
+
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: title,
+            artist: artist,
+            album: album,
+            artwork: [
+                { src: thumbUrl, sizes: '96x96', type: 'image/jpeg' },
+                { src: thumbUrl, sizes: '128x128', type: 'image/jpeg' },
+                { src: thumbUrl, sizes: '192x192', type: 'image/jpeg' },
+                { src: thumbUrl, sizes: '256x256', type: 'image/jpeg' },
+                { src: thumbUrl, sizes: '384x384', type: 'image/jpeg' },
+                { src: thumbUrl, sizes: '512x512', type: 'image/jpeg' }
+            ]
+        });
+
+        // Play / Pause Handlers
+        navigator.mediaSession.setActionHandler('play', () => {
+            audioSource.play();
+            playPauseBtn.innerText = "⏸";
+            vinylDisc.classList.add("playing");
+            navigator.mediaSession.playbackState = "playing";
+        });
+
+        navigator.mediaSession.setActionHandler('pause', () => {
+            audioSource.pause();
+            playPauseBtn.innerText = "▶";
+            vinylDisc.classList.remove("playing");
+            navigator.mediaSession.playbackState = "paused";
+        });
+
+        // Previous & Next Handlers (<, >)
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+            playPrevSong();
+        });
+
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+            playNextSong(false);
+        });
+
+        // Seek backward / forward (10 seconds)
+        navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+            const skipTime = details.seekOffset || 10;
+            audioSource.currentTime = Math.max(audioSource.currentTime - skipTime, 0);
+        });
+
+        navigator.mediaSession.setActionHandler('seekforward', (details) => {
+            const skipTime = details.seekOffset || 10;
+            audioSource.currentTime = Math.min(audioSource.currentTime + skipTime, audioSource.duration || 0);
+        });
+
+        // Lock Screen Progress Bar Seek Handler
+        try {
+            navigator.mediaSession.setActionHandler('seekto', (details) => {
+                if (details.seekTime !== undefined && audioSource.duration) {
+                    audioSource.currentTime = details.seekTime;
+                }
+            });
+        } catch (error) {
+            // Browser might not support seekto action
+        }
+    }
+}
+
+// -------------------------------------------------------------
 // VIBRANT COLOR EXTRACTOR (Extracts Rich Colors from Thumbnail)
 // -------------------------------------------------------------
 function extractColorsFromImage(imgUrl) {
@@ -585,6 +656,9 @@ function playNextSong(isAutoEnded = false) {
                 audioSource.pause();
                 vinylDisc.classList.remove("playing");
                 playPauseBtn.innerText = "▶";
+                if ('mediaSession' in navigator) {
+                    navigator.mediaSession.playbackState = "paused";
+                }
                 return;
             }
         }
@@ -661,6 +735,9 @@ function playTrack(song) {
     fullscreenPlayer.classList.add("active");
 
     document.title = `Playing: ${currentTitle.innerText}`;
+
+    // Update Lock Screen & Notification Center Media Session
+    updateMediaSession(song, thumbUrl);
 }
 
 // 8. Player Controls
@@ -670,10 +747,16 @@ playPauseBtn.onclick = () => {
         audioSource.play();
         playPauseBtn.innerText = "⏸";
         vinylDisc.classList.add("playing");
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.playbackState = "playing";
+        }
     } else {
         audioSource.pause();
         playPauseBtn.innerText = "▶";
         vinylDisc.classList.remove("playing");
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.playbackState = "paused";
+        }
     }
 };
 
@@ -719,6 +802,9 @@ closePlayerBtn.onclick = () => {
     fullscreenPlayer.classList.remove("active");
     queueDrawer.classList.remove("open");
     document.title = "Online Music Player";
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = "none";
+    }
 };
 
 queueToggleBtn.onclick = () => {
@@ -734,6 +820,19 @@ audioSource.ontimeupdate = () => {
         progressBar.value = progress;
         currentTimeLabel.innerText = formatTime(audioSource.currentTime);
         totalDurationLabel.innerText = formatTime(audioSource.duration);
+
+        // Sync Lock Screen timeline
+        if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession) {
+            try {
+                navigator.mediaSession.setPositionState({
+                    duration: audioSource.duration || 0,
+                    playbackRate: audioSource.playbackRate || 1,
+                    position: audioSource.currentTime || 0
+                });
+            } catch (e) {
+                // Ignore unexpected timeline state errors
+            }
+        }
     }
 };
 
