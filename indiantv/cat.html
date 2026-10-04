@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Live IPTV Web & Mobile Player</title>
   
-  <!-- HLS.js Library -->
+  <!-- HLS.js লাইব্রেরি -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <style>
@@ -24,14 +24,14 @@
       overflow: hidden;
     }
 
-    /* Mobile Header & Menu Toggle */
+    /* Mobile Header */
     .mobile-header {
       display: none;
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
-      height: 54px;
+      height: 56px;
       background: #111827;
       padding: 0 16px;
       align-items: center;
@@ -148,7 +148,7 @@
       color: #94a3b8;
     }
 
-    /* Video Area */
+    /* Player Area */
     #player-container {
       flex: 1;
       display: flex;
@@ -156,14 +156,13 @@
       align-items: center;
       justify-content: center;
       padding: 20px;
-      position: relative;
       background: #030712;
+      overflow-y: auto;
     }
 
     .video-wrapper {
       width: 100%;
-      max-width: 1000px;
-      position: relative;
+      max-width: 960px;
       background: #000;
       border-radius: 12px;
       overflow: hidden;
@@ -186,21 +185,49 @@
       text-align: center;
     }
 
-    .error-msg {
-      color: #f87171;
-      font-size: 0.85rem;
+    .status-badge {
+      display: inline-block;
       margin-top: 6px;
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: #1e293b;
+      color: #94a3b8;
+    }
+
+    .error-container {
+      margin-top: 10px;
       display: none;
       text-align: center;
       max-width: 600px;
     }
 
-    /* Responsive for Tablets & Mobile */
+    .error-msg {
+      color: #f87171;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+
+    .btn-external {
+      display: inline-block;
+      background: #374151;
+      color: #f9fafb;
+      padding: 6px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.8rem;
+      transition: background 0.2s;
+    }
+
+    .btn-external:hover {
+      background: #4b5563;
+    }
+
+    /* Responsive */
     @media (max-width: 768px) {
       body {
         flex-direction: column;
-        padding-top: 54px;
-        overflow-y: auto;
+        padding-top: 56px;
       }
 
       .mobile-header {
@@ -209,13 +236,13 @@
 
       #sidebar {
         position: fixed;
-        top: 54px;
+        top: 56px;
         bottom: 0;
         left: 0;
         width: 100%;
-        max-width: 340px;
+        max-width: 320px;
         transform: translateX(-100%);
-        box-shadow: 10px 0 25px rgba(0, 0, 0, 0.5);
+        box-shadow: 10px 0 25px rgba(0, 0, 0, 0.6);
       }
 
       #sidebar.open {
@@ -224,11 +251,6 @@
 
       #player-container {
         padding: 12px;
-        height: auto;
-      }
-
-      .video-wrapper {
-        border-radius: 8px;
       }
     }
   </style>
@@ -237,7 +259,7 @@
 
   <!-- Mobile Top Bar -->
   <div class="mobile-header">
-    <div style="font-weight: 700; color: #38bdf8;">IPTV Player</div>
+    <div style="font-weight: 700; color: #38bdf8;">IPTV Web Player</div>
     <button class="menu-btn" onclick="toggleSidebar()">☰ চ্যানেল তালিকা</button>
   </div>
 
@@ -261,7 +283,12 @@
       <video id="video-player" controls autoplay playsinline></video>
     </div>
     <div id="current-channel-title">কোনো চ্যানেল সিলেক্ট করা নেই</div>
-    <div id="error-box" class="error-msg"></div>
+    <div id="status-tag" class="status-badge" style="display:none;"></div>
+    
+    <div id="error-container" class="error-container">
+      <div id="error-box" class="error-msg">⚠️ ব্রাউজার CORS/Network নীতিমালার কারণে স্ট্রিমটি চালানো সম্ভব হয়নি।</div>
+      <a id="external-link" href="#" target="_blank" class="btn-external">🔗 VLC / প্লেয়ারে লিংক খুলুন</a>
+    </div>
   </main>
 
   <script>
@@ -270,35 +297,39 @@
     const categorySelect = document.getElementById('category-filter');
     const searchBox = document.getElementById('search-box');
     const channelTitle = document.getElementById('current-channel-title');
-    const errorBox = document.getElementById('error-box');
+    const statusTag = document.getElementById('status-tag');
+    const errorContainer = document.getElementById('error-container');
+    const externalLink = document.getElementById('external-link');
     const sidebar = document.getElementById('sidebar');
 
     let allChannels = [];
     let hls = null;
+    let currentChannel = null;
+    let isProxyAttempt = false;
 
     function toggleSidebar() {
       sidebar.classList.toggle('open');
     }
 
-    // tv.m3u file fetch kora
+    // ১. tv.m3u ফাইল ফেচ করা
     async function loadM3U() {
       try {
         const response = await fetch('tv.m3u');
-        if (!response.ok) throw new Error("tv.m3u file load kora jayni!");
+        if (!response.ok) throw new Error("tv.m3u ফাইলটি রুট ফোল্ডারে পাওয়া যায়নি!");
         const text = await response.text();
         allChannels = parseM3U(text);
         buildCategoryDropdown();
         renderChannels(allChannels);
 
         if (allChannels.length > 0) {
-          playStream(allChannels[0].url, allChannels[0].name);
+          selectAndPlay(allChannels[0]);
         }
       } catch (err) {
         channelList.innerHTML = `<li style="padding:16px; color:#ef4444;">Error: ${err.message}</li>`;
       }
     }
 
-    // Regex diye logo, group-title o name parse kora
+    // ২. M3U ফরম্যাট পার্সিং
     function parseM3U(data) {
       const lines = data.split('\n');
       const channels = [];
@@ -313,7 +344,7 @@
           const name = nameParts.slice(1).join(',').trim();
 
           currentInfo = {
-            name: name || "Unknown Channel",
+            name: name || "অজানা চ্যানেল",
             logo: logoMatch ? logoMatch[1] : "",
             category: groupMatch ? groupMatch[1] : "General"
           };
@@ -330,7 +361,7 @@
       return channels;
     }
 
-    // Categories filter generate
+    // ৩. ক্যাটাগরি ড্রপডাউন প্রস্তুত করা
     function buildCategoryDropdown() {
       const categories = [...new Set(allChannels.map(c => c.category))].filter(Boolean);
       categories.sort();
@@ -342,7 +373,7 @@
       });
     }
 
-    // Filter o Search handler
+    // ৪. ফিল্টারিং ও সার্চ
     function filterChannels() {
       const selectedCat = categorySelect.value;
       const searchVal = searchBox.value.toLowerCase();
@@ -356,17 +387,20 @@
       renderChannels(filtered);
     }
 
-    // List Render
+    // ৫. চ্যানেল তালিকা স্ক্রিনে সাজানো
     function renderChannels(channels) {
       channelList.innerHTML = '';
       if (channels.length === 0) {
-        channelList.innerHTML = '<li style="padding:16px; color:#94a3b8;">Kono channel paoya jayni</li>';
+        channelList.innerHTML = '<li style="padding:16px; color:#94a3b8;">কোনো চ্যানেল পাওয়া যায়নি</li>';
         return;
       }
 
       channels.forEach((ch) => {
         const li = document.createElement('li');
         li.className = 'channel-item';
+        if (currentChannel && currentChannel.url === ch.url) {
+          li.classList.add('active');
+        }
 
         const fallbackImg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='44' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='2' y='7' width='20' height='15' rx='2' ry='2'></rect><polyline points='17 2 12 7 7 2'></polyline></svg>";
         const logoSrc = ch.logo && ch.logo.startsWith('http') ? ch.logo : fallbackImg;
@@ -382,7 +416,7 @@
         li.onclick = () => {
           document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
           li.classList.add('active');
-          playStream(ch.url, ch.name);
+          selectAndPlay(ch);
           if (window.innerWidth <= 768) {
             sidebar.classList.remove('open');
           }
@@ -392,42 +426,47 @@
       });
     }
 
-    // Stream Playback Logic
-    function playStream(url, name) {
-      channelTitle.textContent = "এখন চলছে: " + name;
-      errorBox.style.display = 'none';
+    function selectAndPlay(channel) {
+      currentChannel = channel;
+      isProxyAttempt = false;
+      channelTitle.textContent = "এখন চলছে: " + channel.name;
+      externalLink.href = channel.url;
+      errorContainer.style.display = 'none';
+      statusTag.style.display = 'none';
 
+      startStream(channel.url);
+    }
+
+    // ৬. ভিডিও স্ট্রিমিং ও CORS ফলব্যাক ইঞ্জিন
+    function startStream(streamUrl) {
       if (hls) {
         hls.destroy();
       }
 
-      // HTTPS site-e HTTP stream block hote pare (Mixed Content Warning)
-      if (window.location.protocol === 'https:' && url.startsWith('http:')) {
-        errorBox.innerHTML = "⚠️ Eita HTTP stream. HTTPS host-e eita browser theke block hote pare.";
-        errorBox.style.display = 'block';
-      }
-
-      if (Hls.isSupported() && (url.includes('.m3u8') || !url.endsWith('.mp4'))) {
+      if (Hls.isSupported()) {
         hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
-          backBufferLength: 90
+          manifestLoadingTimeOut: 8000,
+          levelLoadingTimeOut: 8000
         });
 
-        hls.loadSource(url);
+        hls.loadSource(streamUrl);
         hls.attachMedia(video);
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch(e => console.log("Autoplay blocked:", e));
+          video.play().catch(() => {});
+          if (isProxyAttempt) {
+            statusTag.textContent = "⚡ প্রক্সি মোডে চলছে";
+            statusTag.style.display = "inline-block";
+          }
         });
 
         hls.on(Hls.Events.ERROR, (event, data) => {
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
-                errorBox.innerHTML = "⚠️ Network / CORS error ba stream offline.";
-                errorBox.style.display = 'block';
-                hls.startLoad();
+                handleNetworkFailure();
                 break;
               case Hls.ErrorTypes.MEDIA_ERROR:
                 hls.recoverMediaError();
@@ -438,10 +477,27 @@
             }
           }
         });
-      } else if (video.canPlayType('application/vnd.apple.mpegurl') || url.endsWith('.mp4')) {
-        // Safari iOS / Native HLS
-        video.src = url;
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Safari (iOS / macOS)
+        video.src = streamUrl;
         video.play().catch(() => {});
+      }
+    }
+
+    // ৭. যদি সরাসরি লিংক ব্লক হয়, তবে অটোমেটিক CORS প্রক্সি দিয়ে চেষ্টা করা
+    function handleNetworkFailure() {
+      if (!isProxyAttempt && currentChannel) {
+        isProxyAttempt = true;
+        statusTag.textContent = "🔄 CORS এরর শনাক্ত হয়েছে, প্রক্সি দিয়ে চেষ্টা করা হচ্ছে...";
+        statusTag.style.display = "inline-block";
+
+        // সর্বজনীন CORS প্রক্সি রাউট
+        const proxied = "https://corsproxy.io/?" + encodeURIComponent(currentChannel.url);
+        startStream(proxied);
+      } else {
+        // প্রক্সিতেও ব্যর্থ হলে এক্সটার্নাল লিংক অপশন দেখানো
+        statusTag.style.display = "none";
+        errorContainer.style.display = 'block';
       }
     }
 
