@@ -294,7 +294,7 @@
         <button class="modal-close-btn" onclick="closePlayerModal()">&times;</button>
       </div>
       <div class="video-box">
-        <video id="modal-video-player" controls autoplay playsinline></video>
+        <video id="modal-video-player" controls autoplay playsinline muted></video>
       </div>
       <div class="modal-footer">
         <span id="stream-status" class="status-badge">Connecting...</span>
@@ -304,7 +304,6 @@
   </div>
 
   <script>
-    // Playlist direct load kora hocche
     const M3U_URL = 'tv.m3u';
     const PROXY_BASE = "https://bdtv.balaramdey.workers.dev/?url=";
 
@@ -323,12 +322,10 @@
     let currentChannel = null;
     let triedProxy = false;
 
-    // Load M3U
     async function loadM3U() {
       try {
         let response = await fetch(M3U_URL);
         if (!response.ok) {
-          // Jodi relative link fail kore, full link try korbe
           response = await fetch('https://dlpl2025.github.io/travelvt/indiantv/tv.m3u');
         }
         const text = await response.text();
@@ -345,7 +342,6 @@
       }
     }
 
-    // Parse M3U
     function parseM3U(data) {
       const lines = data.split('\n');
       const channels = [];
@@ -377,7 +373,6 @@
       return channels;
     }
 
-    // Categories
     function buildCategoryDropdown() {
       const categories = [...new Set(allChannels.map(c => c.category))].filter(Boolean);
       categories.sort();
@@ -390,7 +385,6 @@
       });
     }
 
-    // Filter
     function filterChannels() {
       const selectedCat = categorySelect.value;
       const searchVal = searchBox.value.toLowerCase();
@@ -404,7 +398,6 @@
       renderGrid(filtered);
     }
 
-    // Render Circular Grid
     function renderGrid(channels) {
       channelGrid.innerHTML = '';
       if (channels.length === 0) {
@@ -431,7 +424,6 @@
       });
     }
 
-    // Open Modal Player (Direct first, then fallback to proxy)
     function openPlayerModal(channel) {
       currentChannel = channel;
       triedProxy = false;
@@ -454,8 +446,11 @@
         hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
-          manifestLoadingTimeOut: 10000,
-          levelLoadingTimeOut: 10000
+          manifestLoadingTimeOut: 20000,
+          levelLoadingTimeOut: 20000,
+          fragLoadingTimeOut: 20000,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60
         });
 
         hls.loadSource(url);
@@ -469,10 +464,10 @@
 
         hls.on(Hls.Events.ERROR, (event, data) => {
           if (data.fatal) {
-            // Direct fail korle Cloudflare Proxy diye ekbar try korbe
+            // Direct link block ba network error hole Proxy try kora
             if (!triedProxy && currentChannel) {
               triedProxy = true;
-              modalStatus.textContent = "Direct blocked, retrying with proxy...";
+              modalStatus.textContent = "Direct stream failed, switching to proxy...";
               modalStatus.style.color = "#fbbf24";
               playStream(PROXY_BASE + encodeURIComponent(currentChannel.url));
             } else {
@@ -489,7 +484,6 @@
       }
     }
 
-    // Close Modal Player
     function closePlayerModal() {
       modal.classList.remove('active');
       if (hls) {
