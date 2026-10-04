@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPTV Player</title>
+  
+  <!-- HLS.js লাইব্রেরি লাইভ স্ট্রিমিংয়ের জন্য -->
+  <script src="[https://cdn.jsdelivr.net/npm/hls.js@latest](https://cdn.jsdelivr.net/npm/hls.js@latest)"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      display: flex;
+      height: 100vh;
+      background: #0f172a;
+      color: #f8fafc;
+    }
+
+    /* চ্যানেল লিস্ট সাইডবার */
+    #sidebar {
+      width: 320px;
+      background: #1e293b;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #334155;
+    }
+
+    #sidebar-header {
+      padding: 16px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-bottom: 1px solid #334155;
+      background: #0f172a;
+    }
+
+    #channel-list {
+      list-style: none;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .channel-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid #334155;
+      transition: background 0.2s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .channel-item:hover {
+      background: #334155;
+    }
+
+    .channel-item.active {
+      background: #2563eb;
+      font-weight: 600;
+    }
+
+    /* ভিডিও প্লেয়ার এরিয়া */
+    #player-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    video {
+      width: 100%;
+      max-width: 960px;
+      background: #000;
+      border-radius: 8px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    #current-channel-title {
+      margin-top: 16px;
+      font-size: 1.2rem;
+      color: #cbd5e1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- সাইডবার: চ্যানেল তালিকা -->
+  <aside id="sidebar">
+    <div id="sidebar-header">চ্যানেল তালিকা</div>
+    <ul id="channel-list">
+      <li class="channel-item">লোড হচ্ছে...</li>
+    </ul>
+  </aside>
+
+  <!-- প্লেয়ার এরিয়া -->
+  <main id="player-container">
+    <video id="video-player" controls autoplay playsinline></video>
+    <div id="current-channel-title">কোনো চ্যানেল সিলেক্ট করা নেই</div>
+  </main>
+
+  <script>
+    const video = document.getElementById('video-player');
+    const channelList = document.getElementById('channel-list');
+    const channelTitle = document.getElementById('current-channel-title');
+    let hls = null;
+
+    // ১. রুট ফোল্ডার থেকে tv.m3u ফাইল ফেচ করা
+    async function loadM3U() {
+      try {
+        const response = await fetch('tv.m3u');
+        if (!response.ok) {
+          throw new Error('tv.m3u ফাইলটি রুট ফোল্ডারে পাওয়া যায়নি');
+        }
+        const text = await response.text();
+        const channels = parseM3U(text);
+        renderChannels(channels);
+      } catch (err) {
+        channelList.innerHTML = `<li class="channel-item" style="color: #ef4444;">এরর: ${err.message}</li>`;
+      }
+    }
+
+    // ২. M3U ফাইল পার্স করা
+    function parseM3U(data) {
+      const lines = data.split('\n');
+      const channels = [];
+      let currentName = '';
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.startsWith('#EXTINF:')) {
+          // কমার পরের অংশ থেকে চ্যানেলের নাম নেওয়া
+          const parts = line.split(',');
+          currentName = parts.slice(1).join(',').trim() || 'অজানা চ্যানেল';
+        } else if (line && !line.startsWith('#')) {
+          // লিংক পাওয়া গেলে অবজেক্ট তৈরি
+          channels.push({
+            name: currentName || 'চ্যানেল ' + (channels.length + 1),
+            url: line
+          });
+          currentName = '';
+        }
+      }
+      return channels;
+    }
+
+    // ৩. সাইডবারে চ্যানেল রেন্ডার করা
+    function renderChannels(channels) {
+      channelList.innerHTML = '';
+
+      if (channels.length === 0) {
+        channelList.innerHTML = '<li class="channel-item">কোনো চ্যানেল পাওয়া যায়নি</li>';
+        return;
+      }
+
+      channels.forEach((channel, index) => {
+        const li = document.createElement('li');
+        li.className = 'channel-item';
+        li.textContent = channel.name;
+        li.onclick = () => {
+          document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
+          li.classList.add('active');
+          playStream(channel.url, channel.name);
+        };
+        channelList.appendChild(li);
+      });
+
+      // প্রথম চ্যানেলটি অটোমেটিক চালু করা
+      channelList.children[0].click();
+    }
+
+    // ৪. ভিডিও স্ট্রিমিং হ্যান্ডলার
+    function playStream(url, name) {
+      channelTitle.textContent = `এখন চলছে: ${name}`;
+
+      if (hls) {
+        hls.destroy();
+      }
+
+      if (Hls.isSupported() && url.includes('.m3u8')) {
+        hls = new Hls();
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(() => {});
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl') || !url.includes('.m3u8')) {
+        // সাফারির নেটিভ HLS বা সরাসরি MP4 সাপোর্ট
+        video.src = url;
+        video.play().catch(() => {});
+      }
+    }
+
+    // পেজ লোড হলে M3U রিড শুরু হবে
+    window.addEventListener('DOMContentLoaded', loadM3U);
+  </script>
+</body>
+</html>
