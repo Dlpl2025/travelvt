@@ -135,7 +135,7 @@
       width: 90px;
       height: 90px;
       border-radius: 50%;
-      background: #e5e7eb;
+      background: #ffffff;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(0, 0, 0, 0.05);
       display: flex;
       align-items: center;
@@ -304,8 +304,8 @@
   </div>
 
   <script>
-    // Cloudflare Worker Proxy & M3U URL
-    const M3U_URL = "https://bdtv.balaramdey.workers.dev/?url=" + encodeURIComponent("https://dlpl2025.github.io/travelvt/indiantv/tv.m3u");
+    // Playlist direct load kora hocche
+    const M3U_URL = 'tv.m3u';
     const PROXY_BASE = "https://bdtv.balaramdey.workers.dev/?url=";
 
     const channelGrid = document.getElementById('channel-grid');
@@ -320,12 +320,17 @@
 
     let allChannels = [];
     let hls = null;
+    let currentChannel = null;
+    let triedProxy = false;
 
     // Load M3U
     async function loadM3U() {
       try {
-        const response = await fetch(M3U_URL);
-        if (!response.ok) throw new Error("Could not fetch tv.m3u via Worker!");
+        let response = await fetch(M3U_URL);
+        if (!response.ok) {
+          // Jodi relative link fail kore, full link try korbe
+          response = await fetch('https://dlpl2025.github.io/travelvt/indiantv/tv.m3u');
+        }
         const text = await response.text();
         allChannels = parseM3U(text);
 
@@ -426,8 +431,10 @@
       });
     }
 
-    // Open Modal Player
+    // Open Modal Player (Direct first, then fallback to proxy)
     function openPlayerModal(channel) {
+      currentChannel = channel;
+      triedProxy = false;
       modalTitle.textContent = channel.name;
       modalVlcLink.href = channel.url;
       modalVlcLink.style.display = 'none';
@@ -435,8 +442,10 @@
       modalStatus.style.color = "#34d399";
       modal.classList.add('active');
 
-      const streamTarget = PROXY_BASE + encodeURIComponent(channel.url);
+      playStream(channel.url);
+    }
 
+    function playStream(url) {
       if (hls) {
         hls.destroy();
       }
@@ -445,28 +454,37 @@
         hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
-          manifestLoadingTimeOut: 15000,
-          levelLoadingTimeOut: 15000
+          manifestLoadingTimeOut: 10000,
+          levelLoadingTimeOut: 10000
         });
 
-        hls.loadSource(streamTarget);
+        hls.loadSource(url);
         hls.attachMedia(modalVideo);
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           modalVideo.play().catch(() => {});
-          modalStatus.textContent = "● Live Playing";
+          modalStatus.textContent = triedProxy ? "● Live (Proxy Mode)" : "● Live Playing";
+          modalStatus.style.color = "#34d399";
         });
 
         hls.on(Hls.Events.ERROR, (event, data) => {
           if (data.fatal) {
-            hls.destroy();
-            modalStatus.textContent = "Stream playback failed.";
-            modalStatus.style.color = "#f87171";
-            modalVlcLink.style.display = 'inline';
+            // Direct fail korle Cloudflare Proxy diye ekbar try korbe
+            if (!triedProxy && currentChannel) {
+              triedProxy = true;
+              modalStatus.textContent = "Direct blocked, retrying with proxy...";
+              modalStatus.style.color = "#fbbf24";
+              playStream(PROXY_BASE + encodeURIComponent(currentChannel.url));
+            } else {
+              hls.destroy();
+              modalStatus.textContent = "Stream playback failed.";
+              modalStatus.style.color = "#f87171";
+              modalVlcLink.style.display = 'inline';
+            }
           }
         });
       } else if (modalVideo.canPlayType('application/vnd.apple.mpegurl')) {
-        modalVideo.src = streamTarget;
+        modalVideo.src = url;
         modalVideo.play().catch(() => {});
       }
     }
@@ -482,7 +500,6 @@
       modalVideo.src = "";
     }
 
-    // Close on outside click
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
         closePlayerModal();
