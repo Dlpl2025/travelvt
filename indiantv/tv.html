@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live IPTV Web & Mobile Player</title>
+  
+  <!-- HLS.js Library -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.8/dist/hls.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      display: flex;
+      height: 100vh;
+      background-color: #0b0f19;
+      color: #f1f5f9;
+      overflow: hidden;
+    }
+
+    /* Mobile Header */
+    .mobile-header {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: #111827;
+      padding: 0 16px;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #1f2937;
+      z-index: 100;
+    }
+
+    .menu-btn {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      width: 360px;
+      background: #111827;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #1f2937;
+      flex-shrink: 0;
+      transition: transform 0.3s ease;
+      z-index: 99;
+    }
+
+    .sidebar-controls {
+      padding: 16px;
+      background: #0f172a;
+      border-bottom: 1px solid #1f2937;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .sidebar-controls h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+
+    .search-input, .category-select {
+      width: 100%;
+      padding: 10px 12px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #f8fafc;
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .search-input:focus, .category-select:focus {
+      border-color: #38bdf8;
+    }
+
+    #channel-list {
+      list-style: none;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .channel-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid #1e293b;
+      transition: background 0.15s ease;
+    }
+
+    .channel-item:hover {
+      background: #1e293b;
+    }
+
+    .channel-item.active {
+      background: #1d4ed8;
+    }
+
+    .channel-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      background: #1e293b;
+      object-fit: contain;
+      padding: 2px;
+      border: 1px solid #334155;
+      flex-shrink: 0;
+    }
+
+    .channel-info {
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .channel-name {
+      font-size: 0.92rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .channel-category {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    /* Player Area */
+    #player-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: #030712;
+      overflow-y: auto;
+    }
+
+    .video-wrapper {
+      width: 100%;
+      max-width: 960px;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+      aspect-ratio: 16 / 9;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #000;
+    }
+
+    #current-channel-title {
+      margin-top: 14px;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      text-align: center;
+    }
+
+    .status-badge {
+      display: inline-block;
+      margin-top: 6px;
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: #1e293b;
+      color: #38bdf8;
+    }
+
+    .error-container {
+      margin-top: 10px;
+      display: none;
+      text-align: center;
+      max-width: 600px;
+    }
+
+    .error-msg {
+      color: #f87171;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+
+    .btn-external {
+      display: inline-block;
+      background: #374151;
+      color: #f9fafb;
+      padding: 6px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.8rem;
+      transition: background 0.2s;
+    }
+
+    .btn-external:hover {
+      background: #4b5563;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+        padding-top: 56px;
+      }
+
+      .mobile-header {
+        display: flex;
+      }
+
+      #sidebar {
+        position: fixed;
+        top: 56px;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        max-width: 320px;
+        transform: translateX(-100%);
+        box-shadow: 10px 0 25px rgba(0, 0, 0, 0.6);
+      }
+
+      #sidebar.open {
+        transform: translateX(0);
+      }
+
+      #player-container {
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="mobile-header">
+    <div style="font-weight: 700; color: #38bdf8;">IPTV Web Player</div>
+    <button class="menu-btn" onclick="toggleSidebar()">☰ চ্যানেল তালিকা</button>
+  </div>
+
+  <aside id="sidebar">
+    <div class="sidebar-controls">
+      <h2>চ্যানেল তালিকা</h2>
+      <select id="category-filter" class="category-select" onchange="filterChannels()">
+        <option value="ALL">সব ক্যাটাগরি (All Categories)</option>
+      </select>
+      <input type="text" id="search-box" class="search-input" placeholder="চ্যানেল খুঁজুন..." oninput="filterChannels()">
+    </div>
+    <ul id="channel-list">
+      <li style="padding: 16px; color: #94a3b8;">লোড হচ্ছে...</li>
+    </ul>
+  </aside>
+
+  <main id="player-container">
+    <div class="video-wrapper">
+      <video id="video-player" controls autoplay playsinline></video>
+    </div>
+    <div id="current-channel-title">কোনো চ্যানেল সিলেক্ট করা নেই</div>
+    <div id="status-tag" class="status-badge" style="display:none;"></div>
+    
+    <div id="error-container" class="error-container">
+      <div id="error-box" class="error-msg">⚠️ ব্রাউজার CORS/Network নীতিমালার কারণে স্ট্রিমটি চালানো সম্ভব হয়নি।</div>
+      <a id="external-link" href="#" target="_blank" class="btn-external">🔗 VLC / প্লেয়ারে লিংক খুলুন</a>
+    </div>
+  </main>
+
+  <script>
+    // Apnar dewa Cloudflare Worker M3U link ebong Base Proxy URL
+    const M3U_SOURCE_URL = "https://bdtv.balaramdey.workers.dev/?url=" + encodeURIComponent("https://dlpl2025.github.io/travelvt/indiantv/tv.m3u");
+    const PROXY_BASE = "https://bdtv.balaramdey.workers.dev/?url=";
+
+    const video = document.getElementById('video-player');
+    const channelList = document.getElementById('channel-list');
+    const categorySelect = document.getElementById('category-filter');
+    const searchBox = document.getElementById('search-box');
+    const channelTitle = document.getElementById('current-channel-title');
+    const statusTag = document.getElementById('status-tag');
+    const errorContainer = document.getElementById('error-container');
+    const externalLink = document.getElementById('external-link');
+    const sidebar = document.getElementById('sidebar');
+
+    let allChannels = [];
+    let hls = null;
+    let currentChannel = null;
+
+    function toggleSidebar() {
+      sidebar.classList.toggle('open');
+    }
+
+    // ১. Worker link theke M3U Playlist Load kora
+    async function loadM3U() {
+      try {
+        const response = await fetch(M3U_SOURCE_URL);
+        if (!response.ok) throw new Error("tv.m3u ফাইলটি Worker এর মাধ্যমে পাওয়া যায়নি!");
+        const text = await response.text();
+        allChannels = parseM3U(text);
+
+        if (allChannels.length === 0) {
+          throw new Error("M3U ফাইলে কোনো বৈধ চ্যানেল পাওয়া যায়নি!");
+        }
+
+        buildCategoryDropdown();
+        renderChannels(allChannels);
+        selectAndPlay(allChannels[0]);
+      } catch (err) {
+        channelList.innerHTML = `<li style="padding:16px; color:#ef4444;">Error: ${err.message}</li>`;
+      }
+    }
+
+    // ২. M3U Parse kora
+    function parseM3U(data) {
+      const lines = data.split('\n');
+      const channels = [];
+      let currentInfo = {};
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i].trim();
+        if (line.startsWith('#EXTINF:')) {
+          const logoMatch = line.match(/tvg-logo="([^"]*)"/i);
+          const groupMatch = line.match(/group-title="([^"]*)"/i);
+          const nameParts = line.split(',');
+          const name = nameParts.slice(1).join(',').trim();
+
+          currentInfo = {
+            name: name || "Channel " + (channels.length + 1),
+            logo: logoMatch ? logoMatch[1] : "",
+            category: groupMatch ? groupMatch[1] : "General"
+          };
+        } else if (line && !line.startsWith('#')) {
+          channels.push({
+            name: currentInfo.name || "Channel " + (channels.length + 1),
+            logo: currentInfo.logo || "",
+            category: currentInfo.category || "General",
+            url: line
+          });
+          currentInfo = {};
+        }
+      }
+      return channels;
+    }
+
+    // ৩. Category Dropdown toiri kora
+    function buildCategoryDropdown() {
+      const categories = [...new Set(allChannels.map(c => c.category))].filter(Boolean);
+      categories.sort();
+      categorySelect.innerHTML = '<option value="ALL">সব ক্যাটাগরি (All Categories)</option>';
+      categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        categorySelect.appendChild(opt);
+      });
+    }
+
+    // ৪. Category ebong Search Filter
+    function filterChannels() {
+      const selectedCat = categorySelect.value;
+      const searchVal = searchBox.value.toLowerCase();
+
+      const filtered = allChannels.filter(ch => {
+        const matchesCategory = selectedCat === "ALL" || ch.category === selectedCat;
+        const matchesSearch = ch.name.toLowerCase().includes(searchVal);
+        return matchesCategory && matchesSearch;
+      });
+
+      renderChannels(filtered);
+    }
+
+    // ৫. Channel list UI banano
+    function renderChannels(channels) {
+      channelList.innerHTML = '';
+      if (channels.length === 0) {
+        channelList.innerHTML = '<li style="padding:16px; color:#94a3b8;">কোনো চ্যানেল পাওয়া যায়নি</li>';
+        return;
+      }
+
+      channels.forEach((ch) => {
+        const li = document.createElement('li');
+        li.className = 'channel-item';
+        if (currentChannel && currentChannel.url === ch.url) {
+          li.classList.add('active');
+        }
+
+        const fallbackImg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='44' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='2' y='7' width='20' height='15' rx='2' ry='2'></rect><polyline points='17 2 12 7 7 2'></polyline></svg>";
+        const logoSrc = ch.logo && ch.logo.startsWith('http') ? ch.logo : fallbackImg;
+
+        li.innerHTML = `
+          <img class="channel-logo" src="${logoSrc}" onerror="this.src='${fallbackImg}'" alt="logo" />
+          <div class="channel-info">
+            <span class="channel-name">${ch.name}</span>
+            <span class="channel-category">${ch.category}</span>
+          </div>
+        `;
+
+        li.onclick = () => {
+          document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
+          li.classList.add('active');
+          selectAndPlay(ch);
+          if (window.innerWidth <= 768) {
+            sidebar.classList.remove('open');
+          }
+        };
+
+        channelList.appendChild(li);
+      });
+    }
+
+    // ৬. Channel play kora
+    function selectAndPlay(channel) {
+      currentChannel = channel;
+      channelTitle.textContent = "এখন চলছে: " + channel.name;
+      externalLink.href = channel.url;
+      errorContainer.style.display = 'none';
+      statusTag.style.display = 'none';
+
+      // Prottek stream URL Cloudflare worker proxy diye route kora hocche
+      const streamTarget = PROXY_BASE + encodeURIComponent(channel.url);
+      startStream(streamTarget);
+    }
+
+    function startStream(streamUrl) {
+      if (hls) {
+        hls.destroy();
+      }
+
+      if (Hls.isSupported()) {
+        hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          manifestLoadingTimeOut: 15000,
+          levelLoadingTimeOut: 15000
+        });
+
+        hls.loadSource(streamUrl);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(() => {});
+          statusTag.textContent = "⚡ কানেক্টেড";
+          statusTag.style.display = "inline-block";
+        });
+
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            hls.destroy();
+            statusTag.style.display = 'none';
+            errorContainer.style.display = 'block';
+          }
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = streamUrl;
+        video.play().catch(() => {});
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadM3U);
+  </script>
+</body>
+</html>
