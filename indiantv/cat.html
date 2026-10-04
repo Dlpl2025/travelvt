@@ -292,6 +292,8 @@
   </main>
 
   <script>
+    const CLOUDFLARE_PROXY = "https://bdtv.balaramdey.workers.dev/?url=";
+
     const video = document.getElementById('video-player');
     const channelList = document.getElementById('channel-list');
     const categorySelect = document.getElementById('category-filter');
@@ -306,9 +308,42 @@
     let hls = null;
     let currentChannel = null;
     let isProxyAttempt = false;
+    let streamBaseUrl = "";
 
     function toggleSidebar() {
       sidebar.classList.toggle('open');
+    }
+
+    // Custom HLS Loader যা সমস্ত সেগমেন্ট ও প্লেলিস্ট প্রক্সি দিয়ে রুট করে
+    class ProxyLoader extends Hls.DefaultConfig.loader {
+      constructor(config) {
+        super(config);
+        const originalLoad = this.load.bind(this);
+
+        this.load = function (context, config, callbacks) {
+          if (isProxyAttempt) {
+            let requestUrl = context.url;
+
+            // যদি URL টি প্রক্সি ডোমেইনে রিলেটিভ ভাবে রিজলভ হয়ে থাকে
+            if (requestUrl.startsWith("https://bdtv.balaramdey.workers.dev/")) {
+              const urlParam = new URL(requestUrl).searchParams.get("url");
+              if (urlParam) {
+                streamBaseUrl = urlParam.substring(0, urlParam.lastIndexOf('/') + 1);
+              } else {
+                const relativePath = requestUrl.replace("https://bdtv.balaramdey.workers.dev/", "");
+                const resolvedUrl = new URL(relativePath, streamBaseUrl).href;
+                context.url = CLOUDFLARE_PROXY + encodeURIComponent(resolvedUrl);
+              }
+            } else if (!requestUrl.startsWith(CLOUDFLARE_PROXY)) {
+              // সাধারণ এক্সটার্নাল URL হলে
+              const resolvedUrl = new URL(requestUrl, streamBaseUrl).href;
+              streamBaseUrl = resolvedUrl.substring(0, resolvedUrl.lastIndexOf('/') + 1);
+              context.url = CLOUDFLARE_PROXY + encodeURIComponent(resolvedUrl);
+            }
+          }
+          originalLoad(context, config, callbacks);
+        };
+      }
     }
 
     // ১. tv.m3u ফাইল ফেচ করা
@@ -429,6 +464,7 @@
     function selectAndPlay(channel) {
       currentChannel = channel;
       isProxyAttempt = false;
+      streamBaseUrl = channel.url.substring(0, channel.url.lastIndexOf('/') + 1);
       channelTitle.textContent = "এখন চলছে: " + channel.name;
       externalLink.href = channel.url;
       errorContainer.style.display = 'none';
@@ -447,8 +483,9 @@
         hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
-          manifestLoadingTimeOut: 8000,
-          levelLoadingTimeOut: 8000
+          manifestLoadingTimeOut: 10000,
+          levelLoadingTimeOut: 10000,
+          loader: ProxyLoader
         });
 
         hls.loadSource(streamUrl);
@@ -457,7 +494,7 @@
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           video.play().catch(() => {});
           if (isProxyAttempt) {
-            statusTag.textContent = "⚡ প্রক্সি মোডে চলছে";
+            statusTag.textContent = "⚡ প্রক্সি মোডে চলছে (Cloudflare Worker)";
             statusTag.style.display = "inline-block";
           }
         });
@@ -484,18 +521,17 @@
       }
     }
 
-    // ৭. যদি সরাসরি লিংক ব্লক হয়, তবে অটোমেটিক CORS প্রক্সি দিয়ে চেষ্টা করা
+    // ৭. সরাসরি লিঙ্ক ফেইল করলে Cloudflare Worker দিয়ে রিট্রাই করা
     function handleNetworkFailure() {
       if (!isProxyAttempt && currentChannel) {
         isProxyAttempt = true;
-        statusTag.textContent = "🔄 CORS এরর শনাক্ত হয়েছে, প্রক্সি দিয়ে চেষ্টা করা হচ্ছে...";
+        statusTag.textContent = "🔄 CORS এরর হয়েছে, Cloudflare প্রক্সি দিয়ে চেষ্টা করা হচ্ছে...";
         statusTag.style.display = "inline-block";
 
-        // সর্বজনীন CORS প্রক্সি রাউট
-        const proxied = "https://corsproxy.io/?" + encodeURIComponent(currentChannel.url);
+        streamBaseUrl = currentChannel.url.substring(0, currentChannel.url.lastIndexOf('/') + 1);
+        const proxied = CLOUDFLARE_PROXY + encodeURIComponent(currentChannel.url);
         startStream(proxied);
       } else {
-        // প্রক্সিতেও ব্যর্থ হলে এক্সটার্নাল লিংক অপশন দেখানো
         statusTag.style.display = "none";
         errorContainer.style.display = 'block';
       }
